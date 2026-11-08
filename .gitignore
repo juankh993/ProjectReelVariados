@@ -1,0 +1,19 @@
+# llaves y tokens
+*.key
+.youtube-token*.json
+.youtube-client.json
+.meta-*.json
+.*.key
+
+# salidas y temporales
+logs/
+06-salida/
+02-voz/
+03-visual/
+resources/
+*.mp4
+*.mp3
+
+# sistema
+Thumbs.db
+desktop.ini

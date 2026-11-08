@@ -1,0 +1,20 @@
+{
+  "id": "prueba-sin-motor",
+  "tipo": "fotos",
+  "fecha": "2026-11-07",
+  "voz": "es-MX-JorgeNeural",
+  "salida": "prueba-sin-motor.mp4",
+  "subtitulos": true,
+  "sinMotor": true,
+  "gancho": "PRUEBA DEL MOTOR\nNUEVO",
+  "ganchoDur": 1.6,
+  "vozEn": 1.0,
+  "cola": 1.0,
+  "limiteDuracion": 30,
+  "a": {
+    "vozTexto": "Esta es una prueba del motor de video del canal nuevo.",
+    "visual": [
+      { "tipo": "foto", "archivo": "assets/prueba.jpg", "dur": null, "zoom": "in" }
+    ]
+  }
+}
