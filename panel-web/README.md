@@ -3,6 +3,9 @@
 MVP visual del panel de producción multimedia. No está atado a Furia Nation,
 FrutiReels ni a una temática concreta.
 
+> **Rama:** todo el front + backend vive en `feature/panel-web`.
+> `main` se queda solo con el pipeline de producción, sin la aplicación web.
+
 ## Ejecutar
 
 Abrir `index.html` directamente en el navegador o servir la carpeta:
@@ -34,3 +37,18 @@ Después visitar `http://localhost:8870`.
 6. Conectores Meta y TikTok sujetos a sus requisitos de API.
 
 Las conexiones reales no deben implementarse guardando tokens en el navegador.
+
+## Llaves y credenciales
+
+El listado completo de claves que necesita la app (YouTube, Meta, TikTok,
+Telegram, Pixabay, Pexels, Unsplash, Freesound, Google AI, OpenRouter, Runway,
+S3, Redis) está documentado en **`.env.example`**, en la raíz del repo.
+
+```powershell
+Copy-Item .env.example .env
+```
+
+- `.env` está en `.gitignore`: **nunca** se versiona.
+- Todo es opcional por módulo: el panel funciona sin ninguna clave.
+- Las claves reales del pipeline actual siguen en archivos `*.key`
+  (`*.key` también está ignorado por git).

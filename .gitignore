@@ -10,10 +10,22 @@ logs/
 06-salida/
 02-voz/
 03-visual/
+04-audio/
+05-musica/*
+!05-musica/LEEME.md
 resources/
+assets/canal/_fuente/
 *.mp4
 *.mp3
 
 # sistema
 Thumbs.db
 desktop.ini
+
+# python
+__pycache__/
+*.pyc
+# Llaves y secretos (nunca al repo)
+.env
+.env.local
+*.pem
