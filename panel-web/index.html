@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b1020">
+  <title>MediaPilot — Panel de contenido</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">✦</span><span>MediaPilot</span></div>
+    <nav>
+      <button class="nav-item active" data-view="studio">▣ <span>Estudio</span></button>
+      <button class="nav-item" data-view="projects">◫ <span>Proyectos</span></button>
+      <button class="nav-item" data-view="calendar">◷ <span>Calendario</span></button>
+      <button class="nav-item" data-view="accounts">◎ <span>Cuentas conectadas</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="status-dot"></div> Espacio local activo</div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><p class="eyebrow">CENTRO DE PRODUCCIÓN</p><h1 id="page-title">Estudio</h1></div>
+      <button class="button primary" id="new-project">＋ Nuevo proyecto</button>
+    </header>
+
+    <section id="studio-view" class="view active-view">
+      <div class="project-strip">
+        <div><label>PROYECTO ACTUAL</label><input id="project-name" value="Mi primer proyecto" aria-label="Nombre del proyecto"></div>
+        <div class="format-control"><label>FORMATO</label><select id="format"><option value="vertical">Vertical 9:16</option><option value="horizontal">Horizontal 16:9</option><option value="square">Cuadrado 1:1</option></select></div>
+        <div class="save-state" id="save-state">● Guardado local</div>
+      </div>
+      <div class="studio-grid">
+        <section class="card preview-card">
+          <div class="card-head"><h2>Preview</h2><div class="preview-actions"><button id="fit">Ajustar</button><button id="fullscreen">⛶</button></div></div>
+          <div class="preview-stage"><div class="video-shell" id="video-shell"><div class="empty-preview" id="empty-preview"><div class="play-icon">▶</div><strong>Sube un video para comenzar</strong><span>La preview aparecerá aquí</span></div><video id="preview" controls playsinline hidden></video></div></div>
+          <div class="timeline"><span id="current-time">00:00</span><input type="range" id="scrubber" min="0" max="100" value="0"><span id="total-time">00:00</span></div>
+          <div class="preview-footer"><button class="button secondary" id="upload-video">＋ Añadir video</button><input type="file" id="video-input" accept="video/*" hidden><span id="file-name">Ningún archivo seleccionado</span></div>
+        </section>
+
+        <section class="card chat-card">
+          <div class="card-head"><div><h2>Asistente</h2><p>Trabaja con cualquier temática</p></div><span class="online">● ONLINE</span></div>
+          <div class="chat-messages" id="chat-messages"><div class="message assistant">Hola. Puedo ayudarte a preparar el video, crear metadatos, ajustar el formato o dejarlo listo para publicar. ¿Qué quieres hacer?</div><div class="suggestions"><button data-prompt="Analiza este proyecto y propón un título">Proponer título</button><button data-prompt="Prepara este video para YouTube">Preparar publicación</button><button data-prompt="Haz una versión de 30 segundos">Acortar video</button></div></div>
+          <form class="chat-form" id="chat-form"><input id="chat-input" placeholder="Escribe una instrucción..." autocomplete="off"><button class="send" aria-label="Enviar">➤</button></form>
+        </section>
+      </div>
+      <section class="card assets-card"><div class="card-head"><div><h2>Activos del proyecto</h2><p id="asset-count">0 archivos</p></div><button class="button secondary" id="add-assets">＋ Añadir archivos</button><input type="file" id="asset-input" multiple accept="video/*,image/*,audio/*" hidden></div><div class="asset-list" id="asset-list"><div class="asset-empty">Tus videos, imágenes y audios aparecerán aquí.</div></div></section>
+      <section class="publish-card"><div><p class="eyebrow">SIGUIENTE PASO</p><h2>Publicar cuando estés listo</h2><p>Revisa el preview, prepara los metadatos y conecta tus redes.</p></div><button class="button primary" id="publish-button">Preparar publicación →</button></section>
+    </section>
+
+    <section id="projects-view" class="view"><div class="section-heading"><div><p class="eyebrow">BIBLIOTECA</p><h2>Mis proyectos</h2></div><button class="button primary" id="new-project-2">＋ Nuevo proyecto</button></div><div class="project-grid" id="project-grid"></div></section>
+    <section id="calendar-view" class="view"><div class="section-heading"><div><p class="eyebrow">PLANIFICACIÓN</p><h2>Calendario de publicaciones</h2></div></div><div class="calendar-empty">Aún no hay publicaciones programadas.<br><span>Las publicaciones confirmadas aparecerán aquí.</span></div></section>
+    <section id="accounts-view" class="view"><div class="section-heading"><div><p class="eyebrow">CANALES</p><h2>Cuentas conectadas</h2></div></div><div class="accounts-grid"><div class="account"><b class="yt">▶</b><div><strong>YouTube</strong><span id="yt-status">No conectado</span></div><button data-network="YouTube">Conectar</button></div><div class="account"><b class="ig">◎</b><div><strong>Instagram</strong><span>No conectado</span></div><button data-network="Instagram">Conectar</button></div><div class="account"><b class="tk">♪</b><div><strong>TikTok</strong><span>No conectado</span></div><button data-network="TikTok">Conectar</button></div><div class="account"><b class="fb">f</b><div><strong>Facebook</strong><span>No conectado</span></div><button data-network="Facebook">Conectar</button></div></div><div class="notice"><strong>Seguridad:</strong> las conexiones OAuth reales se habilitarán en el backend. Esta interfaz nunca debe guardar tokens en el navegador.</div></section>
+  </main>
+  <div class="toast" id="toast"></div>
+  <script src="app.js"></script>
+</body>
+</html>
