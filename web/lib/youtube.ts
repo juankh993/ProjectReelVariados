@@ -1,5 +1,5 @@
 import { env } from "./config";
-import { readTokens, writeTokens, type Channel } from "./tokens";
+import { actualizarCuenta, type Cuenta } from "./accounts";
 
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const API = "https://www.googleapis.com/youtube/v3";
@@ -9,28 +9,30 @@ export const SCOPES = [
   "https://www.googleapis.com/auth/youtube.readonly",
 ].join(" ");
 
-/** Devuelve un access_token válido (refresca si hace falta). */
-export async function getAccessToken(): Promise<string> {
-  const tokens = readTokens();
+export type CanalInfo = {
+  id: string;
+  title: string;
+  thumbnail?: string;
+  subscribers: string;
+  videos: string;
+  views: string;
+};
 
-  if (tokens.access_token && tokens.expires_at && tokens.expires_at > Date.now() + 60_000) {
-    return tokens.access_token;
+/** Refresca y devuelve un access_token para ESA cuenta. */
+export async function accessTokenDe(cuenta: Cuenta): Promise<string> {
+  if (cuenta.access_token && cuenta.expires_at && cuenta.expires_at > Date.now() + 60_000) {
+    return cuenta.access_token;
   }
-  if (!tokens.refresh_token) {
-    throw new Error("No hay cuenta de YouTube conectada. Conectala desde el panel.");
-  }
-
-  const body = new URLSearchParams({
-    client_id: env("YOUTUBE_CLIENT_ID"),
-    client_secret: env("YOUTUBE_CLIENT_SECRET"),
-    refresh_token: tokens.refresh_token,
-    grant_type: "refresh_token",
-  });
 
   const res = await fetch(TOKEN_URL, {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body,
+    body: new URLSearchParams({
+      client_id: env("YOUTUBE_CLIENT_ID"),
+      client_secret: env("YOUTUBE_CLIENT_SECRET"),
+      refresh_token: cuenta.refresh_token,
+      grant_type: "refresh_token",
+    }),
   });
 
   const data = (await res.json()) as {
@@ -42,25 +44,21 @@ export async function getAccessToken(): Promise<string> {
 
   if (!res.ok || !data.access_token) {
     throw new Error(
-      `No se pudo refrescar el token: ${data.error || res.status} ${data.error_description || ""}`.trim(),
+      `La cuenta "${cuenta.title}" necesita reconectarse (${data.error || res.status}).`,
     );
   }
 
-  writeTokens({
-    ...tokens,
-    access_token: data.access_token,
-    expires_at: Date.now() + (data.expires_in ?? 3600) * 1000,
-  });
+  const expira = Date.now() + (data.expires_in ?? 3600) * 1000;
+  actualizarCuenta(cuenta.id, { access_token: data.access_token, expires_at: expira });
 
   return data.access_token;
 }
 
-export async function fetchChannel(): Promise<Channel | null> {
-  const access = await getAccessToken();
-  const res = await fetch(
-    `${API}/channels?part=snippet,statistics&mine=true`,
-    { headers: { Authorization: `Bearer ${access}` }, cache: "no-store" },
-  );
+export async function canalDe(accessToken: string): Promise<CanalInfo | null> {
+  const res = await fetch(`${API}/channels?part=snippet,statistics&mine=true`, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    cache: "no-store",
+  });
   if (!res.ok) return null;
 
   const data = (await res.json()) as {
@@ -77,10 +75,10 @@ export async function fetchChannel(): Promise<Channel | null> {
   return {
     id: item.id,
     title: item.snippet.title,
+    thumbnail: item.snippet.thumbnails?.default?.url,
     subscribers: item.statistics.subscriberCount ?? "0",
     videos: item.statistics.videoCount ?? "0",
     views: item.statistics.viewCount ?? "0",
-    thumbnail: item.snippet.thumbnails?.default?.url,
   };
 }
 
@@ -89,21 +87,20 @@ export type UploadOptions = {
   description: string;
   tags: string[];
   privacy: "public" | "unlisted" | "private";
-  fileName: string;
   bytes: Buffer;
   mimeType: string;
 };
 
-/** Subida resumible: crea la sesión y manda el archivo completo. */
-export async function uploadVideo(opts: UploadOptions): Promise<{ id: string }> {
-  const access = await getAccessToken();
-
+export async function subirVideo(
+  accessToken: string,
+  opts: UploadOptions,
+): Promise<{ id: string }> {
   const initRes = await fetch(
-    `${API.replace("/youtube/v3", "/upload/youtube/v3")}/videos?uploadType=resumable&part=snippet,status`,
+    `https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status`,
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${access}`,
+        Authorization: `Bearer ${accessToken}`,
         "Content-Type": "application/json; charset=UTF-8",
         "X-Upload-Content-Length": String(opts.bytes.length),
         "X-Upload-Content-Type": opts.mimeType,
@@ -115,17 +112,14 @@ export async function uploadVideo(opts: UploadOptions): Promise<{ id: string }> 
           tags: opts.tags,
           categoryId: "2",
         },
-        status: {
-          privacyStatus: opts.privacy,
-          selfDeclaredMadeForKids: false,
-        },
+        status: { privacyStatus: opts.privacy, selfDeclaredMadeForKids: false },
       }),
     },
   );
 
   if (!initRes.ok) {
     const txt = await initRes.text();
-    throw new Error(`YouTube rechazó la creación del video: ${initRes.status} ${txt.slice(0, 300)}`);
+    throw new Error(`YouTube rechazó el video: ${initRes.status} ${txt.slice(0, 300)}`);
   }
 
   const location = initRes.headers.get("location");
@@ -134,7 +128,7 @@ export async function uploadVideo(opts: UploadOptions): Promise<{ id: string }> 
   const putRes = await fetch(location, {
     method: "PUT",
     headers: {
-      Authorization: `Bearer ${access}`,
+      Authorization: `Bearer ${accessToken}`,
       "Content-Type": opts.mimeType,
       "Content-Length": String(opts.bytes.length),
     },
@@ -149,13 +143,17 @@ export async function uploadVideo(opts: UploadOptions): Promise<{ id: string }> 
   return { id: json.id };
 }
 
-export async function setThumbnail(videoId: string, bytes: Buffer, mimeType = "image/jpeg") {
-  const access = await getAccessToken();
+export async function ponerMiniatura(
+  accessToken: string,
+  videoId: string,
+  bytes: Buffer,
+  mimeType = "image/jpeg",
+) {
   const res = await fetch(
     `https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=${encodeURIComponent(videoId)}`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${access}`, "Content-Type": mimeType },
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": mimeType },
       body: new Uint8Array(bytes),
     },
   );

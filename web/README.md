@@ -30,7 +30,14 @@ YOUTUBE_CLIENT_ID=...
 YOUTUBE_CLIENT_SECRET=...
 ```
 
-Opcional para el chat con IA:
+Modelo del chat (DeepSeek V4.1 Flash 1017 vía OpenRouter):
+
+```ini
+OPENROUTER_KEY=...
+DEEPSEEK_MODELO=deepseek/deepseek-v4.1-flash-1017
+```
+
+Respaldo si OpenRouter falla:
 
 ```ini
 GOOGLE_AI_KEY=...
@@ -47,9 +54,10 @@ GEMINI_MODELO=gemini-3.5-flash
 | Carga de video + preview con scrubber | ✅ |
 | Formatos 9:16 / 16:9 / 1:1 | ✅ |
 | Biblioteca de activos del proyecto | ✅ |
-| Chat con IA (Gemini 3.5 Flash + fallback local) | ✅ |
-| Conexión de YouTube (OAuth2) | ✅ |
+| Chat con IA (DeepSeek V4.1 Flash 1017 via OpenRouter, fallback Gemini y local) | ✅ |
+| Conexión de YouTube para CUALQUIER usuario (una cuenta por sesión) | ✅ |
 | Estado del canal en vivo (subs, videos, vistas) | ✅ |
+| Varios canales por usuario + desconectar | ✅ |
 | Subida real a YouTube con título, descripción, tags y visibilidad | ✅ |
 | Miniatura al subir | ✅ |
 | Instagram / TikTok / Facebook | ⏳ próxima fase |
@@ -93,9 +101,26 @@ web/
 └── data/                        tokens y subidas (ignorado por git)
 ```
 
+## Cómo conecta cada usuario su YouTube
+
+1. El dueño del servidor crea un proyecto en **console.cloud.google.com**, habilita
+   **YouTube Data API v3** y crea un **ID de cliente OAuth** de tipo *Aplicación de escritorio*
+   (así localhost funciona sin registrar cada puerto).
+2. Pega `YOUTUBE_CLIENT_ID` y `YOUTUBE_CLIENT_SECRET` en `web/.env.local`.
+3. Cada usuario entra al panel, va a **Cuentas → Conectar canal** y autoriza con **su** cuenta.
+4. Vuelve solo al panel y ya puede publicar en su canal.
+
+Puntos clave:
+
+- Cada navegador recibe una cookie de sesión (`mp_sid`): solo ve sus propios canales.
+- Un usuario puede conectar **varios canales** y elegir el destino al publicar.
+- **Desconectar** borra el token guardado de ese canal.
+- Mientras la app de Google esté en modo *Prueba*, hay que agregar a cada persona en
+  **Usuarios de prueba** (límite 100). Para uso abierto hay que publicar la app (verificación de Google).
+
 ## Notas
 
 - Next 16 con `cacheComponents` desactivado: las rutas leen y escriben archivos en cada request.
-- `gemini-3.5-flash` es el modelo por defecto; si falla, prueba `gemini-flash-lite-latest`
-  y por último responde con el modo local.
+- Chat: **DeepSeek V4.1 Flash 1017** vía OpenRouter. Si falla, Gemini 3.5 Flash; si también falla,
+  responde el modo local.
 - La subida usa el endpoint resumible de YouTube (`uploadType=resumable`).

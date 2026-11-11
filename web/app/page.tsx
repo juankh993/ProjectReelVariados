@@ -1,20 +1,37 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 type Vista = "estudio" | "proyectos" | "calendario" | "cuentas";
 type Mensaje = { role: "user" | "assistant"; text: string };
 type Asset = { id: string; name: string; size: number; type: string };
 type Formato = "vertical" | "horizontal" | "cuadrado";
 
+type Cuenta = {
+  id: string;
+  channelId: string;
+  title: string;
+  thumbnail?: string;
+  subscribers: string;
+  videos: string;
+  views: string;
+  shared?: boolean;
+};
+
 type EstadoYT = {
   configured: boolean;
   connected: boolean;
-  channel?: { id: string; title: string; subscribers: string; videos: string; views: string } | null;
-  error?: string;
+  redirectUri?: string;
+  accounts: Cuenta[];
 };
 
-type Resultado = { ok: true; id: string; url: string; thumbnailWarning?: string | null };
+type Resultado = {
+  ok: true;
+  id: string;
+  url: string;
+  channel?: string;
+  thumbnailWarning?: string | null;
+};
 
 const FORMATO_ASPECTO: Record<Formato, string> = {
   vertical: "9 / 16",
@@ -53,14 +70,17 @@ export default function Page() {
   ]);
   const [entrada, setEntrada] = useState("");
   const [pensando, setPensando] = useState(false);
+  const [motor, setMotor] = useState<string>("");
 
   const [yt, setYt] = useState<EstadoYT | null>(null);
+  const [mostrarGuia, setMostrarGuia] = useState(false);
   const [modal, setModal] = useState(false);
   const [titulo, setTitulo] = useState("");
   const [descripcion, setDescripcion] = useState("");
   const [tags, setTags] = useState("shorts");
   const [privacidad, setPrivacidad] = useState<"public" | "unlisted" | "private">("public");
   const [miniatura, setMiniatura] = useState<File | null>(null);
+  const [cuentaSel, setCuentaSel] = useState<string>("");
   const [subiendo, setSubiendo] = useState(false);
   const [resultado, setResultado] = useState<Resultado | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -74,15 +94,17 @@ export default function Page() {
 
   const avisar = useCallback((texto: string, esError = false) => {
     setToast({ texto, error: esError });
-    window.setTimeout(() => setToast(null), 4200);
+    window.setTimeout(() => setToast(null), 4500);
   }, []);
 
   const cargarEstado = useCallback(async () => {
     try {
       const res = await fetch("/api/youtube/status", { cache: "no-store" });
-      setYt((await res.json()) as EstadoYT);
+      const data = (await res.json()) as EstadoYT;
+      setYt(data);
+      setCuentaSel((prev) => (prev && data.accounts.some((a) => a.id === prev) ? prev : data.accounts[0]?.id ?? ""));
     } catch {
-      setYt({ configured: false, connected: false, channel: null });
+      setYt({ configured: false, connected: false, accounts: [] });
     }
   }, []);
 
@@ -97,6 +119,7 @@ export default function Page() {
     const err = params.get("error");
     if (err) {
       avisar(decodeURIComponent(err), true);
+      setVista("cuentas");
       window.history.replaceState({}, "", "/");
     }
   }, [avisar, cargarEstado]);
@@ -145,7 +168,7 @@ export default function Page() {
       `formato:${formato}`,
       `video:${video ? "si" : "no"}`,
       `assets:${assets.length}`,
-      yt?.channel ? `canal:${yt.channel.title}` : "canal:sin conectar",
+      `canales:${yt?.accounts.length ?? 0}`,
     ].join(" | ");
 
     try {
@@ -154,11 +177,12 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: historial, context: contexto }),
       });
-      const data = (await res.json()) as { reply?: string; error?: string };
+      const data = (await res.json()) as { reply?: string; error?: string; motor?: string };
       setChat((prev) => [
         ...prev,
         { role: "assistant", text: data.reply || data.error || "No pude responder." },
       ]);
+      if (data.motor) setMotor(data.motor);
     } catch {
       setChat((prev) => [
         ...prev,
@@ -170,14 +194,9 @@ export default function Page() {
   }
 
   async function publicar() {
-    if (!video) {
-      setError("Primero cargá un video en la preview.");
-      return;
-    }
-    if (!titulo.trim()) {
-      setError("El título es obligatorio.");
-      return;
-    }
+    if (!video) return setError("Primero cargá un video en la preview.");
+    if (!titulo.trim()) return setError("El título es obligatorio.");
+    if (!cuentaSel) return setError("Conectá una cuenta de YouTube primero.");
 
     setSubiendo(true);
     setError(null);
@@ -189,14 +208,14 @@ export default function Page() {
     fd.append("description", descripcion);
     fd.append("tags", tags);
     fd.append("privacy", privacidad);
+    fd.append("accountId", cuentaSel);
     if (miniatura) fd.append("thumbnail", miniatura);
 
     try {
       const res = await fetch("/api/youtube/upload", { method: "POST", body: fd });
       const data = (await res.json()) as Resultado & { error?: string };
-      if (!res.ok || !data.ok) {
-        setError(data.error || "Falló la subida.");
-      } else {
+      if (!res.ok || !data.ok) setError(data.error || "Falló la subida.");
+      else {
         setResultado(data);
         avisar("Video publicado en YouTube");
       }
@@ -207,14 +226,24 @@ export default function Page() {
     }
   }
 
-  const titulos = useMemo(
-    () => [
-      "Abrí el panel y cargá un video",
-      "Pedile al asistente el título",
-      "Publicá a YouTube con un clic",
-    ],
-    [],
-  );
+  async function desconectar(id: string, tituloCanal: string) {
+    if (!window.confirm(`¿Desconectar "${tituloCanal}" de este panel?`)) return;
+    try {
+      const res = await fetch("/api/youtube/status", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = (await res.json()) as { accounts?: Cuenta[] };
+      setYt((prev) => (prev ? { ...prev, accounts: data.accounts ?? [], connected: (data.accounts ?? []).length > 0 } : prev));
+      avisar("Cuenta desconectada");
+    } catch {
+      avisar("No se pudo desconectar", true);
+    }
+  }
+
+  const cuentas = yt?.accounts ?? [];
+  const conectado = cuentas.length > 0;
 
   return (
     <div className="layout">
@@ -243,8 +272,12 @@ export default function Page() {
           ))}
         </nav>
         <div className="sidebar-bottom">
-          <span className={`dot ${yt?.connected ? "on" : "off"}`} />
-          {yt?.connected ? "YouTube conectado" : "YouTube sin conectar"}
+          <span className={`dot ${conectado ? "on" : "off"}`} />
+          {conectado
+            ? cuentas.length === 1
+              ? cuentas[0].title
+              : `${cuentas.length} canales conectados`
+            : "YouTube sin conectar"}
         </div>
       </aside>
 
@@ -264,6 +297,11 @@ export default function Page() {
               className="button primary"
               onClick={() => {
                 if (!video) return avisar("Cargá un video para continuar", true);
+                if (!conectado) {
+                  avisar("Primero conectá tu cuenta de YouTube", true);
+                  setVista("cuentas");
+                  return;
+                }
                 setModal(true);
               }}
             >
@@ -274,6 +312,19 @@ export default function Page() {
 
         {vista === "estudio" && (
           <>
+            {!conectado && (
+              <div className="alert warn" style={{ marginTop: 0, marginBottom: 14 }}>
+                Todavía no conectaste tu cuenta de YouTube.{" "}
+                <strong
+                  style={{ cursor: "pointer", textDecoration: "underline" }}
+                  onClick={() => setVista("cuentas")}
+                >
+                  Conectala acá
+                </strong>{" "}
+                para poder publicar.
+              </div>
+            )}
+
             <div className="project-strip">
               <div style={{ flex: 1, minWidth: 220 }}>
                 <label>PROYECTO ACTUAL</label>
@@ -288,8 +339,8 @@ export default function Page() {
                 </select>
               </div>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                <span className="dot on" />
-                Guardado en el proyecto
+                <span className={`dot ${conectado ? "on" : "off"}`} />
+                {conectado ? "Listo para publicar" : "Sin canal conectado"}
               </div>
             </div>
 
@@ -361,7 +412,7 @@ export default function Page() {
                 <div className="card-head">
                   <div>
                     <h2>Asistente</h2>
-                    <p>Trabaja con cualquier temática</p>
+                    <p>{motor || "DeepSeek V4.1 Flash"}</p>
                   </div>
                   <span className="badge gray">IA</span>
                 </div>
@@ -451,12 +502,21 @@ export default function Page() {
               <div>
                 <p className="eyebrow">SIGUIENTE PASO</p>
                 <h2>Publicar cuando estés listo</h2>
-                <p>Revisá la preview, prepará los metadatos y enviá el video a YouTube.</p>
+                <p>
+                  {conectado
+                    ? `Destino: ${cuentas.find((c) => c.id === cuentaSel)?.title ?? cuentas[0].title}`
+                    : "Conectá tu cuenta de YouTube para publicar."}
+                </p>
               </div>
               <button
                 className="button primary"
                 onClick={() => {
                   if (!video) return avisar("Cargá un video para continuar", true);
+                  if (!conectado) {
+                    avisar("Primero conectá tu cuenta de YouTube", true);
+                    setVista("cuentas");
+                    return;
+                  }
                   setModal(true);
                 }}
               >
@@ -484,29 +544,37 @@ export default function Page() {
 
         {vista === "cuentas" && (
           <>
-            <div className="accounts-grid">
-              <div className="account">
-                <b className="netlogo yt">▶</b>
-                <div className="info">
-                  <strong>YouTube</strong>
-                  <span>
-                    {yt?.connected
-                      ? `${yt.channel?.title ?? "Conectado"} · ${yt.channel?.subscribers ?? "?"} subs`
-                      : yt?.configured
-                        ? "Sin conectar"
-                        : "Faltan las credenciales en .env"}
-                  </span>
-                </div>
-                {yt?.connected ? (
-                  <button className="button secondary" onClick={cargarEstado}>
-                    Actualizar
-                  </button>
-                ) : (
-                  <a className="button secondary" href="/api/youtube/oauth/start">
-                    Conectar
-                  </a>
-                )}
+            <div className="section-heading" style={{ marginBottom: 14 }}>
+              <div>
+                <p className="eyebrow">CANAL DE DESTINO</p>
+                <h2 style={{ margin: 0, fontSize: 19 }}>Tus canales de YouTube</h2>
               </div>
+              <a className="button primary" href="/api/youtube/oauth/start">
+                ＋ Conectar canal
+              </a>
+            </div>
+
+            <div className="accounts-grid">
+              {cuentas.map((c) => (
+                <div className="account" key={c.id}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    className="netlogo avatar"
+                    src={c.thumbnail || "https://i.ytimg.com/vi/placeholder/default.jpg"}
+                    alt={c.title}
+                  />
+                  <div className="info">
+                    <strong>{c.title}</strong>
+                    <span>
+                      {c.subscribers} subs · {c.videos} videos
+                      {c.shared ? " · canal del servidor" : ""}
+                    </span>
+                  </div>
+                  <button className="button danger" onClick={() => desconectar(c.id, c.title)}>
+                    Desconectar
+                  </button>
+                </div>
+              ))}
 
               {[
                 ["Instagram", "ig", "◎"],
@@ -529,24 +597,62 @@ export default function Page() {
               ))}
             </div>
 
-            {yt?.channel && (
-              <div className="alert ok">
-                Canal conectado: <strong>{yt.channel.title}</strong> · {yt.channel.subscribers} subs ·{" "}
-                {yt.channel.videos} videos · {yt.channel.views} vistas
-              </div>
-            )}
-
             {!yt?.configured && (
               <div className="alert warn">
-                Para conectar YouTube copiá <code>.env.example</code> a <code>.env</code> y completá{" "}
-                <code>YOUTUBE_CLIENT_ID</code> y <code>YOUTUBE_CLIENT_SECRET</code>. Después reiniciá el
-                servidor.
+                Faltan las credenciales de Google. Copiá <code>.env.example</code> a{" "}
+                <code>.env.local</code>, completá <code>YOUTUBE_CLIENT_ID</code> y{" "}
+                <code>YOUTUBE_CLIENT_SECRET</code>, y reiniciá el servidor.
               </div>
             )}
 
             <div className="notice">
-              <strong>Seguridad:</strong> los tokens viven en el servidor (<code>web/data/tokens.json</code>)
-              y nunca se envían al navegador. La subida siempre requiere que confirmes desde el panel.
+              <div style={{ display: "flex", justifyContent: "space-between", gap: 12, flexWrap: "wrap" }}>
+                <strong>¿Cómo conecta cada usuario su cuenta?</strong>
+                <button className="button ghost" onClick={() => setMostrarGuia((v) => !v)}>
+                  {mostrarGuia ? "Ocultar guía" : "Ver guía"}
+                </button>
+              </div>
+
+              {mostrarGuia && (
+                <ol style={{ margin: "12px 0 0", paddingLeft: 20, lineHeight: 2 }}>
+                  <li>
+                    Entrá a <code>console.cloud.google.com</code> y creá un proyecto (o usá uno).
+                  </li>
+                  <li>
+                    <em>APIs y servicios → Biblioteca</em>: habilitá <strong>YouTube Data API v3</strong>.
+                  </li>
+                  <li>
+                    <em>Pantalla de consentimiento OAuth</em>: tipo <strong>Externo</strong>. Mientras la app
+                    esté en modo <strong>Prueba</strong>, agregá a cada persona en{" "}
+                    <strong>Usuarios de prueba</strong> (máximo 100).
+                  </li>
+                  <li>
+                    <em>Credenciales → Crear credenciales → ID de cliente OAuth</em>: tipo{" "}
+                    <strong>Aplicación de escritorio</strong> (permite localhost sin registrar cada puerto).
+                  </li>
+                  <li>
+                    Pegá el <strong>Client ID</strong> y el <strong>Client Secret</strong> en{" "}
+                    <code>web/.env.local</code> y reiniciá.
+                  </li>
+                  <li>
+                    Cada usuario entra al panel y toca <strong>Conectar canal</strong>. Autoriza con su propia
+                    cuenta de Google y vuelve solo.
+                  </li>
+                </ol>
+              )}
+
+              {yt?.redirectUri && (
+                <div style={{ marginTop: 12 }}>
+                  URI de redirección de este servidor:{" "}
+                  <code style={{ color: "#c8d1e5", wordBreak: "break-all" }}>{yt.redirectUri}</code>
+                </div>
+              )}
+            </div>
+
+            <div className="notice">
+              <strong>Privacidad:</strong> cada persona que entra al panel conecta su propia cuenta y
+              solo ve sus canales. Los tokens quedan en el servidor (<code>web/data/accounts.json</code>) y
+              nunca viajan al navegador. Al desconectar se borra el permiso guardado.
             </div>
           </>
         )}
@@ -559,6 +665,17 @@ export default function Page() {
             <p style={{ color: "var(--muted)", fontSize: 12.5, margin: 0 }}>
               {video ? `${video.name} · ${peso(video.size)}` : "Sin video"}
             </p>
+
+            <div className="field">
+              <label>CANAL DE DESTINO</label>
+              <select value={cuentaSel} onChange={(e) => setCuentaSel(e.target.value)}>
+                {cuentas.map((c) => (
+                  <option key={c.id} value={c.id}>
+                    {c.title} ({c.subscribers} subs)
+                  </option>
+                ))}
+              </select>
+            </div>
 
             <div className="field">
               <label>TÍTULO</label>
@@ -617,7 +734,10 @@ export default function Page() {
             {error && <div className="alert err">{error}</div>}
             {resultado && (
               <div className="alert ok">
-                Publicado: <a href={resultado.url} target="_blank" rel="noreferrer">{resultado.url}</a>
+                Publicado en {resultado.channel}:{" "}
+                <a href={resultado.url} target="_blank" rel="noreferrer">
+                  {resultado.url}
+                </a>
                 {resultado.thumbnailWarning && (
                   <div style={{ marginTop: 6 }}>Miniatura: {resultado.thumbnailWarning}</div>
                 )}
