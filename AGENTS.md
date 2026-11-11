@@ -139,3 +139,19 @@ python scripts\servir.py "06-salida" 8860
 - [x] Primer tema ("Tu cuerpo brilla") publicado
 - [x] Autorizar el canal de YouTube (token propio)
 - [ ] Bajar 2-3 músicas de YouTube Audio Library (ver `05-musica/LEEME.md`)
+
+## Panel web (rama `feature/panel-web`) — 2026-11-10
+- `web/` es la aplicacion real: **Next.js 16 + React 19 + TypeScript** (front y backend juntos).
+  `panel-web/` queda como prototipo estatico de referencia.
+- Se levanta con `cd web; npm run dev` -> http://localhost:3000
+- **Lo que ya funciona**: preview de video, formatos 9:16/16:9/1:1, biblioteca de activos,
+  chat con IA (**gemini-3.5-flash**, con fallback local automatico), conexion OAuth de YouTube,
+  estado del canal en vivo y **subida real** con titulo/descripcion/tags/visibilidad + miniatura.
+- `gemini-flash-latest` da **503** seguido (alta demanda) y `gemini-2.5-flash` ya no esta disponible
+  para cuentas nuevas: usar **`gemini-3.5-flash`** o `gemini-flash-lite-latest`.
+- Next 16 trae `cacheComponents: true` por defecto: **no acepta** `export const runtime` ni
+  `export const dynamic` en las rutas. Se desactivo en `next.config.ts`.
+- Tokens en `web/data/tokens.json` (servidor, gitignored). Secrets en `web/.env.local`.
+- Endpoints: `/api/chat`, `/api/youtube/{status,upload}`, `/api/youtube/oauth/{start,callback}`.
+- Pendiente: conectores Instagram/TikTok/Facebook, calendario, render FFmpeg desde el panel y
+  exportacion para CapCut (MP4 + SRT + audio + assets + manifest).
