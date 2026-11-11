@@ -345,3 +345,54 @@ para no quedarse clavada en 75%.
 Límite conocido: la **última escena absorbe todo el tiempo restante**, asi que si la voz es
 mucho mas larga que las escenas, el ultimo plano puede quedar de 8-10s quieto. Mejora pendiente:
 repartir el sobrante en escenas extra.
+
+---
+
+## ⏭️ PENDIENTES PARA MAÑANA (cierre del 11-nov-2026)
+
+### 1. PRIORIDAD: la última escena absorbe todo el tiempo sobrante
+
+**Síntoma:** si el guion es más largo que la suma de las escenas, la última queda quieta
+8-10 segundos (en el reel del creepypasta, la cara del chico al final).
+
+**Causa:** en `construirConfig` (web/lib/render.ts) la última escena se marca con `dur: null`
+y `reel.ps1` le da todo el resto.
+
+**Arreglo propuesto:**
+1. Estimar la duración real de la voz (ya se hace: `vozTexto.length / 13`).
+2. Al construir el visual, calcular el sobrante = `estimadoVoz - suma(fijas)`.
+3. Si el sobrante > 6s, **insertar escenas extra** con material genérico o repetir búsquedas
+   de la misma escena con otra foto, hasta cubrir el sobrante en tramos de 3-5s.
+4. Solo entonces la última queda con `dur: null` y un sobrante pequeño.
+
+**Alternativa:** modificar `scripts/reel.ps1` para que reparta el sobrante entre las escenas
+en vez de dárselo todo a la última.
+
+### 2. Orden acordado con el usuario
+
+| # | Tarea | Estado |
+|---|---|---|
+| 1 | **Límite de la última escena** | ← mañana, primero |
+| 2 | Conectores: Instagram (ya probado en el repo de Furia), Facebook, TikTok | pendiente |
+| 3 | Calendario de publicaciones | pendiente |
+| 4 | Exportación CapCut | último |
+
+### 3. Detalles sueltos
+
+- El **estimado de tiempo** quedó calibrado (45 + audio*12 + escenas*20). Con 6 escenas y 30s
+  el render tarda ~9 min en el i3. Si se nota lento, la opción es bajar la resolución de trabajo
+  del `zoompan` o generar los planos en paralelo.
+- **Unsplash**: 50 peticiones/hora. El render hace como máximo 6 descargas; si se hacen muchos
+  renders seguidos puede toparse con el límite y caer al respaldo de Pixabay.
+- `03-visual/panel/` acumula todo lo descargado por el panel. Conviene una limpieza periódica
+  (los archivos `_fuentes-*.txt` son la atribución obligatoria de Unsplash: no borrarlos si el
+  material se usa en un video publicado).
+- El editor de guion todavía no permite **agregar o quitar** escenas, solo editarlas.
+- `panel-web/` (el prototipo estático) sigue en la rama; se puede borrar cuando el panel Next
+  esté completo.
+
+### 4. Estado de los repos al cerrar
+
+- `proyectoReels` (Furia Nation) → rama `main`, limpio, pusheado.
+- `proyectoReelsVariado` (canal nuevo + panel) → rama `feature/panel-web`, limpio.
+- El panel se levanta con `cd web ; npm run dev` → http://localhost:3000
