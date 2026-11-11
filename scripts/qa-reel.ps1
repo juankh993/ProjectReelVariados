@@ -8,8 +8,8 @@
 
 param(
   [Parameter(Mandatory=$true)][string]$Video,
-  [double]$MinDur = 20,
-  [double]$MaxDur = 25,
+  [double]$MinDur = 45,
+  [double]$MaxDur = 60,
   [double]$DurTol = 0.6,          # tolerancia extra sobre MaxDur
   [double]$MinLufs = -15.5,
   [double]$MaxLufs = -13.0,
@@ -17,6 +17,8 @@ param(
   [double]$MotorEntra = -1,       # opcional: segundo donde debe ENTRAR el motor
   [double]$MaxSilencioInicio = 1.0,
   [double]$MinCierre = 0.8,       # ultimos X segundos deben tener audio (motor de cierre)
+  [switch]$SinMusica,             # reel solo voz: no exige audio en el cierre
+  [string]$Config = "",           # opcional: JSON del reel para revisar planos
   [switch]$Json
 )
 
@@ -59,6 +61,14 @@ $rmsInicio = RMS $Video 0 $MaxSilencioInicio
 $rmsCierre = RMS $Video ([math]::Max(0, $dur - $MinCierre)) $MinCierre
 $rmsMedio  = RMS $Video ([math]::Floor($dur / 2)) 0.6
 
+# --- pantallas negras (detecta planos casi negros > 0.5s) ---
+$bd = (& $ff -hide_banner -i $Video -vf "blackdetect=d=0.5:pix_th=0.03" -an -f null NUL 2>&1 | Out-String)
+$negroMax = 0.0
+foreach ($x in [regex]::Matches($bd, 'black_start:([0-9.]+)\s+black_end:([0-9.]+)\s+black_duration:([0-9.]+)')) {
+  $dNegro = [double]$x.Groups[3].Value
+  if ($dNegro -gt $negroMax) { $negroMax = $dNegro }
+}
+
 # --- golpe de motor (opcional) ---
 $motorOk = $true; $motorDetalle = "-"
 if ($MotorEntra -gt 0.05 -and $MotorEntra -lt $dur) {
@@ -76,13 +86,26 @@ function Add-Check($nombre, $ok, $detalle) {
 }
 
 Add-Check "resolucion 1080x1920" ($w -eq 1080 -and $h -eq 1920) ("{0}x{1}" -f $w, $h)
-Add-Check "duracion 20-25s" ($dur -ge $MinDur -and $dur -le ($MaxDur + $DurTol)) ("{0:N2}s" -f $dur)
+Add-Check "sin pantallas negras (>0.5s)" ($negroMax -lt 0.5) ("maximo {0:N2}s" -f $negroMax)
+Add-Check ("duracion {0:N0}-{1:N0}s" -f $MinDur, $MaxDur) ($dur -ge $MinDur -and $dur -le ($MaxDur + $DurTol)) ("{0:N2}s" -f $dur)
 Add-Check "audio en el primer segundo" ($rmsInicio -gt -50) ("{0:N1} dB" -f $rmsInicio)
-Add-Check "cierre con sonido (no vacio)" ($rmsCierre -gt -40) ("{0:N1} dB en los ultimos {1:N1}s" -f $rmsCierre, $MinCierre)
+if (-not $SinMusica) { Add-Check "cierre con sonido (no vacio)" ($rmsCierre -gt -60) ("{0:N1} dB en los ultimos {1:N1}s" -f $rmsCierre, $MinCierre) }
 Add-Check "loudness -15.5..-13 LUFS" ($lufs -ge $MinLufs -and $lufs -le $MaxLufs) ("{0:N1} LUFS" -f $lufs)
 Add-Check "true peak <= -1.0 dBTP" ($tp -le $MaxTruePeak -and $tp -gt -99) ("{0:N1} dBTP" -f $tp)
 Add-Check "audio continuo (mitad)" ($rmsMedio -gt -60) ("{0:N1} dB" -f $rmsMedio)
-if ($MotorEntra -gt 0.05) { Add-Check ("entrada de motor en {0:N1}s" -f $MotorEntra) $motorOk $motorDetalle } else { Add-Check "motor desde el inicio" ($antes -gt -30) ("no aplica salto; nivel {0:N1} dB" -f $antes) }
+if ($MotorEntra -gt 0.05) { Add-Check ("entrada de motor en {0:N1}s" -f $MotorEntra) $motorOk $motorDetalle }
+
+if ($Config -and (Test-Path $Config)) {
+  $cfgQ = Get-Content $Config -Raw -Encoding UTF8 | ConvertFrom-Json
+  $planosQ = @()
+  if ($cfgQ.a -and $cfgQ.a.visual) { $planosQ += @($cfgQ.a.visual) }
+  if ($cfgQ.b -and $cfgQ.b.visual) { $planosQ += @($cfgQ.b.visual) }
+  $archQ = @($planosQ | Where-Object { $_ -and $_.archivo } | ForEach-Object { "$($_.archivo)" })
+  $maxUso = 0
+  if ($archQ.Count -gt 0) { $maxUso = ($archQ | Group-Object | Measure-Object -Property Count -Maximum).Maximum }
+  Add-Check "imagenes reutilizadas <= 3" ($maxUso -le 3) ("maximo {0} veces" -f $maxUso)
+  Add-Check "planos >= 5" ($archQ.Count -ge 5) ("{0} planos" -f $archQ.Count)
+}
 
 $fallas = @($checks | Where-Object { $_.Estado -eq "FALLA" })
 

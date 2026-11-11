@@ -1,0 +1,29 @@
+{
+  "id": "galan",
+  "tipo": "fotos",
+  "fecha": "2026-11-11",
+  "salida": "galan.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "LA PAPELETA QUE\nCAMBIÓ EL PAÍS",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozArchivo": "02-voz/galan-a.mp3",
+    "vozTexto": "El 18 de agosto de 1989, Luis Carlos Galán fue asesinado en un acto de campaña en Soacha, cuando era el favorito para ganar la presidencia de Colombia. Tenía 46 años. Su muerte no frenó el cambio: lo aceleró. Al año siguiente, un grupo de estudiantes impulsó la 'séptima papeleta': una papeleta simbólica que pedía convocar una Asamblea Constituyente. La idea era que la gente la metiera en las urnas junto con su voto real. Funcionó. Millones de personas la apoyaron, el gobierno convocó la Asamblea y en 1991 Colombia estrenó una Constitución nueva. La papeleta no era oficial. Pero cambió el país. ¿Vos sabías de dónde salió la Constitución del 91?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/colombia-flag-1.jpg", "dur": 9.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/old-newspaper-1.jpg", "dur": 9.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/voting-ballot-3.jpg", "dur": 9.0, "zoom": "in2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/old-newspaper-2.jpg", "dur": 9.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/colombia-flag-1.jpg", "dur": 9.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/galan/old-newspaper-1.jpg", "dur": null, "zoom": "out" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/comfortable-mystery.mp3", "vol": 0.15 }
+}

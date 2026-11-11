@@ -1,0 +1,30 @@
+{
+  "id": "venus",
+  "tipo": "fotos",
+  "fecha": "2026-11-09",
+  "salida": "venus.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "UN DÍA MÁS LARGO\nQUE UN AÑO",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozArchivo": "02-voz/venus-a.mp3",
+    "vozTexto": "En Venus, un día dura más que un año. El planeta gira tan despacio que tarda doscientos cuarenta y tres días terrestres en dar una vuelta sobre su eje. Pero solo necesita doscientos veinticinco para completar una órbita alrededor del Sol. Y hay algo más raro: gira al revés. Si pudieras pararte en su superficie, verías salir el Sol por el oeste y ponerse por el este. No es un detalle menor: ese giro lentísimo ayuda a explicar por qué Venus es un horno. Su atmósfera atrapa el calor y la superficie ronda los cuatrocientos sesenta grados, suficiente para derretir plomo. Es el planeta más caliente del sistema solar, aunque no sea el más cercano al Sol. ¿Lo sabías?",
+    "visual": [
+      { "tipo": "video", "archivo": "03-visual/clips/venus-2d.mp4", "desde": 0, "dur": 12, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/venus-globe/venus-globe-3-2160.jpg", "dur": 7, "zoom": "out", "modo": "blurfill" },
+      { "tipo": "video", "archivo": "03-visual/clips/venus-2d.mp4", "desde": 4, "dur": 7, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/venus-magellan/venus-magellan-4.jpg", "dur": 7, "zoom": "in", "modo": "blurfill" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/venus-globe/venus-globe-4-2160.jpg", "dur": 7, "zoom": "out", "modo": "blurfill" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/venus-globe/venus-globe-3-2160.jpg", "dur": 7, "zoom": "in", "modo": "blurfill" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/venus-globe/venus-globe-4-2160.jpg", "dur": null, "zoom": "in", "modo": "blurfill" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/frozen-star.mp3", "vol": 0.15 }
+}

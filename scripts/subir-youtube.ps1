@@ -1,19 +1,22 @@
 # subir-youtube.ps1 — Sube un video a YouTube (usa el token de youtube-auth.ps1)
 #
 # Uso:
-#   .\scripts\subir-youtube.ps1 -Video "06-salida/2026-10-14/1-challenger.mp4" `
-#     -Titulo "797 HP: el muscle car mas brutal de Dodge" `
-#     -Descripcion "..." -Tags "shorts,musclecars,hellcat" -Privacidad public
+#   .\scripts\subir-youtube.ps1 -Video "06-salida/2026-11-07/mi-reel.mp4" `
+#     -Titulo "Tu cuerpo brilla (y no lo sabias)" `
+#     -Descripcion "..." -Tags "curiosidades,ciencia,shorts"
+#
+# Sube en PRIVADO por defecto: el video se publica recien cuando el dueño da el OK.
 
 param(
   [Parameter(Mandatory=$true)][string]$Video,
   [Parameter(Mandatory=$true)][string]$Titulo,
   [string]$Descripcion = "",
-  [string]$Tags = "shorts,musclecars,cars,v8",
-  [string]$Categoria = "2",                 # 2 = Autos y vehiculos
-  [ValidateSet("public","unlisted","private")][string]$Privacidad = "public",
+  [string]$Tags = "curiosidades,ciencia,datos curiosos,shorts,educacion",
+  [string]$Categoria = "27",               # 27 = Educacion | 28 = Ciencia y tecnologia
+  [ValidateSet("public","unlisted","private")][string]$Privacidad = "private",
   [string]$Programar = "",                    # ISO 8601, ej 2026-10-21T12:30:00-05:00 (publica sola)
-  [string]$TokenFile = ".youtube-token-FURIA.json"   # canal fijo por script (no se cambia por flag)
+  [string]$Thumb = "",                        # miniatura 1080x1920 (jpg/png, <2 MB)
+  [string]$TokenFile = ".youtube-token-VARIADO.json"   # canal fijo por script (no se cambia por flag)
 )
 
 $ErrorActionPreference = "Stop"
@@ -71,3 +74,16 @@ $res = Invoke-RestMethod -Uri $uploadUrl -Method Put -Headers @{ Authorization =
   -ContentType "video/mp4" -Body $bytes -TimeoutSec 900
 
 Write-Host "OK -> https://youtu.be/$($res.id)"
+
+if ($Thumb) {
+  if (-not (Test-Path $Thumb)) { Write-Host "AVISO: no existe la miniatura $Thumb"; exit 0 }
+  try {
+    $img = [IO.File]::ReadAllBytes((Resolve-Path $Thumb))
+    $ct = if ($Thumb -match '\.png$') { "image/png" } else { "image/jpeg" }
+    Invoke-RestMethod -Uri ("https://www.googleapis.com/upload/youtube/v3/thumbnails/set?videoId=" + $res.id + "&uploadType=media") `
+      -Method Post -Headers @{ Authorization = "Bearer $access" } -ContentType $ct -Body $img -TimeoutSec 120 | Out-Null
+    Write-Host "Miniatura OK"
+  } catch {
+    Write-Host ("AVISO: no se pudo poner la miniatura: " + $_.Exception.Message)
+  }
+}

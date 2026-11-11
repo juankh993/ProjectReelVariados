@@ -19,6 +19,15 @@ pip install edge-tts
 
 `edge-tts` es lo único imprescindible: genera la **voz** y los **subtítulos**, gratis e ilimitado.
 
+Para **Gemini TTS** (voz Iapetus) hacen falta además:
+
+```powershell
+pip install faster-whisper "av==12.3.0"
+```
+
+`faster-whisper` alinea el audio de Gemini con el guion para sacar los subtítulos
+(Gemini no devuelve tiempos por palabra). La primera vez descarga el modelo `base` (~145 MB).
+
 ## 2. Qué NO viene en el repo
 
 El `.gitignore` excluye a propósito:
@@ -73,7 +82,7 @@ $env:PIXABAY_API_KEY = "tu_key"
 
 | Fuente | Licencia | Cómo se obtiene |
 |---|---|---|
-| **NASA / ESA** | Dominio público | images.nasa.gov · esahubble.org |
+| **NASA / ESA** | Dominio público | images.nasa.gov · esahubble.org · `scripts\buscar-nasa.ps1` |
 | Pexels | Pexels License | pexels.com (descarga manual) |
 | Pixabay | Pixabay License | `scripts\buscar-fotos.ps1` / `buscar-clips.ps1` |
 | Unsplash | Unsplash License | `scripts\buscar-unsplash.ps1` |
@@ -84,13 +93,14 @@ Música: **YouTube Audio Library** o **Pixabay Music** (nunca música con copyri
 ### Autorizar YouTube
 
 ```powershell
-scripts\youtube-auth.ps1 -Canal furia -Scope "https://www.googleapis.com/auth/youtube.force-ssl"
+scripts\youtube-auth.ps1 -Canal variado -Scope "https://www.googleapis.com/auth/youtube.force-ssl"
 ```
 
 Se abre el navegador: hay que **elegir la cuenta correcta** del canal y aceptar.
-Guarda el token en `.youtube-token-FURIA.json`.
+Guarda el token en `.youtube-token-VARIADO.json`.
 
-> El parámetro `-Canal` define el nombre del archivo. Para otro canal, ajustar el script o pasar `-Salida`.
+> El parámetro `-Canal` define el nombre del archivo (`furia`, `fruti` o `variado`).
+> Para otro nombre, usar `-Salida ".youtube-token-MI-CANAL.json"`.
 
 ⚠️ Los tokens de YouTube caducan cada ~7 días (la app está en modo Testing). Cuando falle la subida,
 volver a correr ese comando.
@@ -99,7 +109,13 @@ volver a correr ese comando.
 
 ```powershell
 # buscar fotos (prueba de la key de Pixabay)
-scripts\buscar-fotos.ps1 -Query "space" -Cantidad 2
+scripts\buscar-fotos.ps1 -Query "nebula" -Cantidad 2
+
+# buscar material de la NASA (sin key)
+scripts\buscar-nasa.ps1 -Query "carina nebula" -Cantidad 2
+
+# avatar y banner del canal
+scripts\marca-canal.ps1 -Nombre "Mi Canal" -Fondo "assets\canal\_fuente\nebula-space-1.jpg"
 
 # render de prueba (usa un PNG generado, no necesita material externo)
 scripts\reel.ps1 -Config "01-guiones\2026-11-07\prueba.json"

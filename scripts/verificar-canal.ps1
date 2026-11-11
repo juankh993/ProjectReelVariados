@@ -5,11 +5,11 @@
 # que lo borres a mano en Studio (queda privado).
 #
 # Uso:
-#   .\scripts\verificar-canal.ps1              # ambos
-#   .\scripts\verificar-canal.ps1 -Solo FURIA
+#   .\scripts\verificar-canal.ps1              # todos los que tengan token
+#   .\scripts\verificar-canal.ps1 -Solo VARIADO
 
 param(
-  [ValidateSet("ambos","FURIA","FRUTI")][string]$Solo = "ambos"
+  [ValidateSet("ambos","FURIA","FRUTI","VARIADO")][string]$Solo = "ambos"
 )
 
 $ErrorActionPreference = "Stop"
@@ -18,14 +18,19 @@ $ff = (Get-Command ffmpeg -ErrorAction SilentlyContinue).Source
 if (-not $ff) { throw "ffmpeg no esta en PATH" }
 
 $esperados = @{
-  "FURIA" = @{ file = ".youtube-token-FURIA.json"; id = "UCx7YGgjDt2XLs29BuRCnVXA"; nombre = "Furia Nation" }
-  "FRUTI" = @{ file = ".youtube-token-FRUTI.json"; id = "UC3y_AQmvL8WqAbKW51ghMog"; nombre = "FrutiReels" }
+  "FURIA"   = @{ file = ".youtube-token-FURIA.json";   id = "UCx7YGgjDt2XLs29BuRCnVXA"; nombre = "Furia Nation" }
+  "FRUTI"   = @{ file = ".youtube-token-FRUTI.json";   id = "UC3y_AQmvL8WqAbKW51ghMog"; nombre = "FrutiReels" }
+  "VARIADO" = @{ file = ".youtube-token-VARIADO.json"; id = "UC_MqXv0irkUqYphEU8LXuOA"; nombre = "Datoneta" }
 }
 
 $tmp = Join-Path $env:TEMP ("ytprobe-" + [guid]::NewGuid().ToString("N").Substring(0,6) + ".mp4")
-& $ff -hide_banner -loglevel error -y -f lavfi -i "color=c=black:s=320x240:d=1" -c:v libx264 -pix_fmt yuv420p $tmp
+# Clip valido (3s, 720x1280, con audio silencioso): YouTube rechaza los de 1s/320x240.
+& $ff -hide_banner -loglevel error -y `
+  -f lavfi -i "color=c=0x0B1026:s=720x1280:d=3" `
+  -f lavfi -i "anullsrc=r=48000:cl=stereo" `
+  -shortest -c:v libx264 -preset veryfast -pix_fmt yuv420p -c:a aac -b:a 128k -movflags +faststart $tmp
 
-$lista = if ($Solo -eq "ambos") { @("FURIA","FRUTI") } else { @($Solo) }
+$lista = if ($Solo -eq "ambos") { @("FURIA","FRUTI","VARIADO") } else { @($Solo) }
 
 foreach($k in $lista){
   $cfg = $esperados[$k]
@@ -46,14 +51,16 @@ foreach($k in $lista){
   $u = $r1.Headers.Location; if ($u -is [array]) { $u = $u[0] }
   $v = Invoke-RestMethod -Uri $u -Method Put -Headers @{ Authorization = $auth } -ContentType "video/mp4" -Body $mp4 -TimeoutSec 300
 
-  $ok = ($v.snippet.channelId -eq $cfg.id)
-  Write-Output ("[$k] canal real: " + $v.snippet.channelTitle + " (" + $v.snippet.channelId + ")  |  esperado: " + $cfg.nombre + " (" + $cfg.id + ")")
-  Write-Output ($(if($ok){ "     RESULTADO: CORRECTO" } else { "     RESULTADO: *** MAL ASIGNADO *** - no uses ese token para subir" }))
+  $ok = if ($cfg.id) { ($v.snippet.channelId -eq $cfg.id) } else { $true }
+  Write-Output ("[$k] canal real: " + $v.snippet.channelTitle + " (" + $v.snippet.channelId + ")  |  esperado: " + $cfg.nombre + " " + $(if ($cfg.id) { "(" + $cfg.id + ")" } else { "(id sin registrar: anotalo en verificar-canal.ps1)" }))
+  if (-not $cfg.id) { Write-Output "     RESULTADO: token valido (canal sin id esperado registrado)" }
+  else { Write-Output ($(if($ok){ "     RESULTADO: CORRECTO" } else { "     RESULTADO: *** MAL ASIGNADO *** - no uses ese token para subir" })) }
   try {
     Invoke-RestMethod -Uri ("https://www.googleapis.com/youtube/v3/videos?part=id&id=" + $v.id) -Method Delete -Headers @{ Authorization = $auth } -TimeoutSec 30 | Out-Null
     Write-Output ("     probe eliminado (" + $v.id + ")")
   } catch {
     Write-Output ("     probe quedo en el canal (" + $v.id + ") -> borralo en Studio (privado)")
+    Write-Output ("     https://studio.youtube.com/video/" + $v.id + "/edit")
   }
 }
 Remove-Item $tmp -Force -ErrorAction SilentlyContinue

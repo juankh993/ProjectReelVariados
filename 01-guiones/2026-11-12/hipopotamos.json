@@ -1,0 +1,32 @@
+{
+  "id": "hipopotamos",
+  "tipo": "fotos",
+  "fecha": "2026-11-12",
+  "salida": "hipopotamos.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "LOS HIPOPÓTAMOS\nDE ESCOBAR",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozArchivo": "02-voz/hipopotamos-a.mp3",
+    "vozTexto": "En los años ochenta, Pablo Escobar llevó cuatro hipopótamos a su zoológico privado en Colombia. Cuando murió, en 1993, los animales quedaron sueltos en la cuenca del río Magdalena. Hoy son más de doscientos. Es la población de hipopótamos más grande fuera de África, y no tiene depredadores naturales. El problema no es el número: cada uno come unos cincuenta kilos de pasto por día y defeca en el agua. Eso carga el río de nitrógeno y fósforo, dispara las algas y les quita oxígeno a los peces. Colombia probó esterilizarlos, trasladarlos y hasta sacrificarlos. Nada salió barato. Y hay un detalle incómodo: algunos científicos creen que podrían ocupar el lugar de animales gigantes que se extinguieron. ¿Vos qué harías con ellos?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-mouth-2.jpg", "dur": 7.2, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-water-3.jpg", "dur": 6.4, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-mouth-1.jpg", "dur": 5.2, "zoom": "detalle" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippopotamus-2.jpg", "dur": 4.5, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-mouth-3.jpg", "dur": 5.3, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-water-1.jpg", "dur": 3.2, "zoom": "detalle2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippopotamus-1.jpg", "dur": 6.2, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/tropical-river-jungle-3.jpg", "dur": 6.6, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/hipopotamos/hippo-water-2.jpg", "dur": null, "zoom": "in" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/comfortable-mystery.mp3", "vol": 0.15 }
+}

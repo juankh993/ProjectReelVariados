@@ -1,11 +1,12 @@
 # buscar-fotos.ps1 — Busca y descarga FOTOS de Pixabay (modelos especificos, consistentes)
 #
 # Uso:
-#   .\scripts\buscar-fotos.ps1 -Query "dodge challenger" -Cantidad 6
-#   .\scripts\buscar-fotos.ps1 -Query "ford mustang" -Cantidad 6 -Orientacion horizontal
+#   .\scripts\buscar-fotos.ps1 -Query "nebula" -Cantidad 6
+#   .\scripts\buscar-fotos.ps1 -Query "dodge challenger" -Cantidad 6 -SoloAutos -MismoAuto
 #
-# Valida que las fotos sean de autos (por tags) y agrupa por autor para que el auto sea
-# el mismo en todo el video.
+# Por defecto devuelve las fotos de la busqueda sin filtrar (sirve para cualquier tema).
+# Con -SoloAutos exige tags de auto; con -MismoAuto agrupa por autor para que el auto
+# sea el mismo en todo el video (solo tiene sentido junto con -SoloAutos).
 #
 # La API key se toma, en este orden: -Key, $env:PIXABAY_API_KEY, o .pixabay.key
 
@@ -16,7 +17,8 @@ param(
   [string]$Salida = "03-fotos",
   [ValidateSet("all","horizontal","vertical")][string]$Orientacion = "all",
   [int]$MinWidth = 800,
-  [bool]$MismoAuto = $true
+  [switch]$SoloAutos,
+  [switch]$MismoAuto
 )
 
 $ErrorActionPreference = "Stop"
@@ -60,19 +62,24 @@ $genericos = @('car','cars','auto','autos','automobile','automotive','vehicle','
   'oldsmobile','amc','chrysler','the','and','of','el','la','de')
 $distintivas = @(($Query.ToLower() -split '\s+') | Where-Object { $_ -and ($genericos -notcontains $_) })
 
-# 3b) Validar por tags: debe ser auto Y (si hay modelo) mencionar el modelo en los tags
+# 3b) Validar: por defecto alcanza con que la foto tenga tamano util.
+#     Con -SoloAutos se exige tag de auto (y el modelo, si el query lo nombra).
 $validas = $resp.hits | Where-Object {
   $tags = (" " + $_.tags.ToLower() + " ")
-  $esAuto = ($carWords | Where-Object { $tags -like "*$_*" }).Count -gt 0
-  $esModelo = if ($distintivas.Count -gt 0) { ($distintivas | Where-Object { $tags -like "*$_*" }).Count -gt 0 } else { $true }
+  $esAuto = if ($SoloAutos) { ($carWords | Where-Object { $tags -like "*$_*" }).Count -gt 0 } else { $true }
+  $esModelo = if ($SoloAutos -and $distintivas.Count -gt 0) { ($distintivas | Where-Object { $tags -like "*$_*" }).Count -gt 0 } else { $true }
   $esAuto -and $esModelo
 } | Where-Object { $_.largeImageURL -and ($_.imageWidth -ge $MinWidth -or $_.imageHeight -ge $MinWidth) }
 
-Write-Host ("  Resultados: {0} | validos como auto: {1}" -f $resp.hits.Count, $validas.Count)
-if (-not $validas) { Write-Host "Ninguna foto paso la validacion de auto. Prueba otra busqueda."; return }
+if ($SoloAutos) {
+  Write-Host ("  Resultados: {0} | validos como auto: {1}" -f $resp.hits.Count, $validas.Count)
+} else {
+  Write-Host ("  Resultados: {0} | validos: {1}" -f $resp.hits.Count, $validas.Count)
+}
+if (-not $validas) { Write-Host "Ninguna foto paso la validacion. Prueba otra busqueda."; return }
 
-# 4) Consistencia ESTRICTA: usar SOLO las fotos del autor mas prolífico (mismo auto)
-if ($MismoAuto) {
+# 4) Consistencia ESTRICTA (solo autos): usar SOLO las fotos del autor mas prolífico
+if ($SoloAutos -and $MismoAuto) {
   $grupos = $validas | Group-Object user | Sort-Object Count -Descending
   $top = $grupos[0]
   if ($top.Count -ge 3) {

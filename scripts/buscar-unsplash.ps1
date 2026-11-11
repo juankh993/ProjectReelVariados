@@ -1,9 +1,11 @@
 # buscar-unsplash.ps1 — Busca y descarga FOTOS de Unsplash (API oficial)
 #
 # Uso:
-#   .\scripts\buscar-unsplash.ps1 -Query "oldsmobile 442" -Cantidad 6
-#   .\scripts\buscar-unsplash.ps1 -Query "cadillac cts-v" -Cantidad 8 -Orientacion portrait
-#   .\scripts\buscar-unsplash.ps1 -Query "amc javelin" -TrackDownload
+#   .\scripts\buscar-unsplash.ps1 -Query "nebula" -Cantidad 6
+#   .\scripts\buscar-unsplash.ps1 -Query "cadillac cts-v" -Cantidad 8 -SoloAutos -TrackDownload
+#
+# Por defecto devuelve las fotos de la busqueda sin filtrar (sirve para cualquier tema).
+# Con -SoloAutos exige que la descripcion/tags mencionen un auto.
 #
 # La API key (Access Key) se toma, en este orden: -Key, $env:UNSPLASH_ACCESS_KEY, o .unsplash.key
 # El Secret va en .unsplash-secret.key (solo hace falta para flujos OAuth; la búsqueda NO lo usa).
@@ -19,6 +21,8 @@ param(
   [string]$Salida = "03-fotos",
   [ValidateSet("all", "portrait", "landscape", "squarish")][string]$Orientacion = "all",
   [string]$KeyFile = ".unsplash.key",
+  [string]$Key,
+  [switch]$SoloAutos,
   [switch]$TrackDownload
 )
 
@@ -58,16 +62,20 @@ Write-Host ("  Resultados: {0}" -f $resp.total)
 
 if (-not $results) { Write-Host "Sin resultados."; return }
 
-# 3) Filtro: que la foto sea de un auto (alt_description + tags)
-$carPattern = 'car|automobile|vehicle|muscle|coupe|sedan|classic|vintage|truck|van|road|parked|driving|engine|grille|wheel|hood|dashboard|interior|exhaust|wheel|mustang|chevrolet|ford|dodge|chrysler|cadillac|oldsmobile|pontiac|plymouth|buick|mercury|pontiac|camaro|challenger|charger|corvette|vette|vette|supercar|coupe|racing|auto show|garage'
-$validos = @()
-foreach ($p in $results) {
-  $txt = (@($p.alt_description) + @($p.description) + @($p.tags | ForEach-Object { $_.title; $_.name })) -join " "
-  if ($txt -and $txt -match $carPattern) { $validos += $p }
+# 3) Filtro (opcional): que la foto sea de un auto (alt_description + tags)
+if ($SoloAutos) {
+  $carPattern = 'car|automobile|vehicle|muscle|coupe|sedan|classic|vintage|truck|van|road|parked|driving|engine|grille|wheel|hood|dashboard|interior|exhaust|wheel|mustang|chevrolet|ford|dodge|chrysler|cadillac|oldsmobile|pontiac|plymouth|buick|mercury|pontiac|camaro|challenger|charger|corvette|vette|vette|supercar|coupe|racing|auto show|garage'
+  $validos = @()
+  foreach ($p in $results) {
+    $txt = (@($p.alt_description) + @($p.description) + @($p.tags | ForEach-Object { $_.title; $_.name })) -join " "
+    if ($txt -and $txt -match $carPattern) { $validos += $p }
+  }
+  Write-Host ("  Validas como auto: {0} / {1}" -f $validos.Count, $results.Count)
+  $results = $validos | Select-Object -First $Cantidad
+  if (-not $results) { Write-Host "Ninguna foto paso la validacion de auto. Prueba otra busqueda."; return }
+} else {
+  $results = $results | Select-Object -First $Cantidad
 }
-Write-Host ("  Validas como auto: {0} / {1}" -f $validos.Count, $results.Count)
-$results = $validos | Select-Object -First $Cantidad
-if (-not $results) { Write-Host "Ninguna foto paso la validacion de auto. Prueba otra busqueda."; return }
 
 # 4) Descargar
 $slug = ($Query -replace '[^a-zA-Z0-9]+', '-').Trim('-').ToLower()

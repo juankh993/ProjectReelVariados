@@ -1,0 +1,29 @@
+{
+  "id": "campana",
+  "tipo": "fotos",
+  "fecha": "2026-11-14",
+  "salida": "campana.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "LA CAMPANA QUE\nNUNCA SE APAGA",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozArchivo": "02-voz/campana-a.mp3",
+    "vozTexto": "En un laboratorio de Oxford hay una campana que lleva sonando desde 1840. No está conectada a nada: la mueve una pila que nadie ha abierto. Se la conoce como la Campana Eléctrica de Oxford. El martillo golpea dos campanas, una y otra vez, unas dos veces por segundo. Se calcula que ya sonó más de diez mil millones de veces. Lo raro es la pila: dos columnas de discos metálicos apilados, cubiertos de azufre. Nadie sabe exactamente qué metales son, porque abrirla podría detenerla para siempre. Los científicos creen que puede seguir funcionando siglos. Una pila que dura más de 180 años y nadie sabe bien cómo. ¿La apagarías para ver qué tiene adentro?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/oxford-bell.jpg", "dur": 9.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/vintage-laboratory-2.jpg", "dur": 9.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/pendulum-clock-2.jpg", "dur": 9.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/pendulum-clock-1.jpg", "dur": 9.0, "zoom": "in2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/vintage-laboratory-2.jpg", "dur": 7.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/campana/oxford-bell.jpg", "dur": null, "zoom": "out" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/comfortable-mystery.mp3", "vol": 0.15 }
+}

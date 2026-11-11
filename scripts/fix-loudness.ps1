@@ -13,7 +13,7 @@ $m = [regex]::Match($json, '(?s)\{.*\}')
 if(-not $m.Success){ Write-Output "ERROR: no se pudo medir loudness"; exit 1 }
 $d = $m.Value | ConvertFrom-Json
 Write-Output ("medido: I=$($d.input_i) TP=$($d.input_tp) LRA=$($d.input_lra)")
-$af = "loudnorm=I=$Lufs`:TP=$Tp`:LRA=11:measured_I=$($d.input_i):measured_TP=$($d.input_tp):measured_LRA=$($d.input_lra):measured_thresh=$($d.input_thresh):offset=$($d.target_offset):linear=true,alimiter=limit=0.70:level=false"
+$af = "loudnorm=I=$Lufs`:TP=$Tp`:LRA=11:measured_I=$($d.input_i):measured_TP=$($d.input_tp):measured_LRA=$($d.input_lra):measured_thresh=$($d.input_thresh):offset=$($d.target_offset):linear=true,alimiter=limit=0.85:level=false"
 
 $tmp = [IO.Path]::Combine([IO.Path]::GetTempPath(), ("loud-" + [guid]::NewGuid().ToString('N') + ".m4a"))
 & $ff -hide_banner -loglevel error -y -i $Entrada -af $af -c:a aac -b:a 192k -ar 48000 $tmp

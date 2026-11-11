@@ -1,0 +1,30 @@
+{
+  "id": "agujeros",
+  "tipo": "footage",
+  "fecha": "2026-11-10",
+  "salida": "agujeros.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "vozArchivo": "02-voz/agujeros-a.mp3",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "EL CHOQUE MÁS\nPOTENTE DEL UNIVERSO",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.8,
+  "limiteDuracion": 70,
+  "a": {
+    "vozTexto": "En 2015, LIGO detectó algo que había pasado mil trescientos millones de años antes: el choque de dos agujeros negros. Uno pesaba treinta y seis veces más que el Sol. El otro, veintinueve. Giraron uno alrededor del otro cada vez más rápido y, en la última fracción de segundo, se fusionaron en uno solo de sesenta y dos masas solares. La diferencia, tres masas solares, se convirtió en ondas gravitacionales. En ese instante, el choque liberó más potencia que toda la luz de las estrellas del universo observable. Pero no brilló: hizo vibrar el espacio. En la Tierra, LIGO midió ese estiramiento: menor que el tamaño de un protón. ¿Lo sabías?",
+    "visual": [
+      { "tipo": "video", "archivo": "03-visual/clips/bh-2d.mp4", "desde": 0, "dur": 9, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/bh-img/black-hole-3.jpg", "dur": 6, "zoom": "in", "modo": "blurfill" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/bh-img/black-hole-6.jpg", "dur": 6, "zoom": "out", "modo": "blurfill" },
+      { "tipo": "video", "archivo": "03-visual/clips/bh-2d.mp4", "desde": 6, "dur": 5, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/bh-img/black-hole-1.jpg", "dur": 6, "zoom": "in2", "modo": "blurfill" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/ligo/observatory-1.jpg", "dur": 6, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/nasa/bh-img/black-hole-3.jpg", "dur": null, "zoom": "in", "modo": "blurfill" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/frozen-star.mp3", "vol": 0.15 }
+}

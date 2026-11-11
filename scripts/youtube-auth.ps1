@@ -8,7 +8,7 @@
 param(
   [int]$Port = 8080,
   [string]$Scope = "https://www.googleapis.com/auth/youtube.upload",
-  [ValidateSet("furia","fruti")][string]$Canal = "furia",   # define el archivo destino
+  [ValidateSet("furia","fruti","variado")][string]$Canal = "variado",   # define el archivo destino
   [string]$Salida = "",                       # si se omite, usa .youtube-token-FURIA.json / -FRUTI.json
   [switch]$Manual,                            # navegador en otra maquina (usuario remoto)
   [string]$Callback = ""                      # URL del redirect (o el code) cuando se usa -Manual
@@ -51,7 +51,7 @@ Write-Host "Si el navegador no se abre, pega esta URL en tu navegador:"
 Write-Host $authUrl
 Write-Host ""
 Start-Process $authUrl
-Write-Host "Esperando la autorizacion (inicia sesion con la cuenta de Furia Nation y acepta)..."
+Write-Host "Esperando la autorizacion (inicia sesion con la cuenta del canal y acepta)..."
 
 $context = $listener.GetContext()
 $code = $context.Request.QueryString["code"]
@@ -69,7 +69,11 @@ if (-not $code) { throw "No se recibio el codigo de autorizacion ($errorMsg)." }
 
 # Resolver archivo de token por canal si no se especifico manualmente
 if (-not $Salida) {
-  $Salida = if ($Canal -eq "fruti") { ".youtube-token-FRUTI.json" } else { ".youtube-token-FURIA.json" }
+  $Salida = switch ($Canal) {
+    "fruti"   { ".youtube-token-FRUTI.json" }
+    "furia"   { ".youtube-token-FURIA.json" }
+    default   { ".youtube-token-VARIADO.json" }
+  }
 }
 
 # Intercambiar el codigo por tokens

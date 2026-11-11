@@ -1,0 +1,28 @@
+{
+  "id": "masetero",
+  "tipo": "fotos",
+  "fecha": "2026-11-13",
+  "salida": "masetero.mp4",
+  "voz": "es-MX-JorgeNeural",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "EL MÚSCULO MÁS FUERTE\nDEL CUERPO",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozTexto": "El músculo más fuerte de tu cuerpo, para su tamaño, no está en los brazos ni en las piernas. Está en la mandíbula. Se llama masetero, y es el que cierra la boca. Cuando mordés con fuerza, puede generar hasta noventa kilos de presión por centímetro cuadrado entre los dientes. Ojo: no es el más fuerte en términos absolutos. Los músculos de las piernas mueven mucho más peso. Pero por centímetro cuadrado, el masetero gana. Por eso los dentistas insisten tanto con el bruxismo: apretar los dientes mientras dormís puede desgastarlos y doler toda la cara. Y hay una paradoja: es un músculo chico, pero genera más fuerza por centímetro cuadrado que casi cualquier otro. La próxima vez que muerdas algo, acordate: estás usando el campeón. ¿Lo sabías?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/man-face-profile-1.jpg", "dur": 8.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/human-skull-2.jpg", "dur": 8.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/man-face-profile-2.jpg", "dur": 8.0, "zoom": "in2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/man-face-profile-3.jpg", "dur": 8.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/walnuts-1.jpg", "dur": 7.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/human-skull-1.jpg", "dur": 7.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/masetero/man-face-profile-1.jpg", "dur": null, "zoom": "out" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/life-of-riley.mp3", "vol": 0.15 }
+}

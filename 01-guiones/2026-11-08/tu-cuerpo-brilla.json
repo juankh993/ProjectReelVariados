@@ -1,0 +1,31 @@
+{
+  "id": "tu-cuerpo-brilla",
+  "tipo": "fotos",
+  "fecha": "2026-11-08",
+  "salida": "tu-cuerpo-brilla.mp4",
+  "vozMotor": "gemini",
+  "voz": "Iapetus",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "TU CUERPO BRILLA",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozArchivo": "02-voz/tu-cuerpo-brilla-a.mp3",
+    "vozTexto": "Tu cuerpo está emitiendo luz ahora mismo. No es una metáfora: tus células liberan fotones al producir energía. Esa luz es mil veces más débil de lo que el ojo humano puede detectar. En 2009, un equipo japonés puso a cinco voluntarios en un cuarto oscuro, frente a un sensor que cuenta fotones uno por uno. Y los cuerpos aparecieron brillando. Lo más raro: el brillo no es parejo. La cara emite más que el resto, sobre todo las mejillas. Y sigue un ritmo diario: es mínimo a media mañana y llega a su pico cerca de las cuatro de la tarde. Esa luz no es el calor que irradiás. Es un subproducto del metabolismo: moléculas que se excitan y devuelven esa energía en forma de luz. ¿Lo sabías?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/portrait-dark-1.jpg", "dur": 5.5, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/laboratory-dark-3.jpg", "dur": 5.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/silhouette-dark-room-3.jpg", "dur": 3.0, "zoom": "in2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/neon-portrait-2.jpg", "dur": 6.5, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/thermal-camera-1.jpg", "dur": 5.5, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/face-close-up-2.jpg", "dur": 8.0, "zoom": "detalle" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/unsplash-sunset-window-2.jpg", "dur": 6.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/portrait-dark-3.jpg", "dur": 3.5, "zoom": "detalle2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/tu-cuerpo-brilla/neon-portrait-1.jpg", "dur": null, "zoom": "out" }
+    ]
+  }
+}

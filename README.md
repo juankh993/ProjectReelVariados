@@ -23,7 +23,23 @@ python scripts\servir.py "06-salida" 8860
 
 - `AGENTS.md` — memoria del proyecto, reglas y pipeline
 - `docs/ESTRATEGIA.md` — formato, pilares, primeros 10 temas
+- `docs/MARCA.md` — paleta, tipografías y medidas de las piezas del canal
+- `docs/CANAL.md` — identidad, descripción y configuración de YouTube
+- `docs/PLANTILLA-VIDEO.md` — descripción, título y etiquetas de cada video
+- `docs/VOZ.md` — comparación edge-tts vs Gemini TTS y cómo alinear subtítulos
+- `docs/PUBLICADOS.md` — historial de videos publicados y retención
+- `docs/METRICAS.md` — cómo se consultan las métricas y qué hacer con ellas
 - `docs/LICENCIAS.md` — fuentes permitidas y registro de material
+
+## Marca del canal
+
+```powershell
+scripts\marca-canal.ps1 -Nombre "Datoneta" -Fondo "assets\canal\_fuente\nebula-space-1.jpg"
+```
+
+Genera `assets\canal\avatar-<slug>.png` (1024×1024) y `banner-<slug>.png` (2560×1440),
+con el nombre y la bajada del canal ya compuestos. La zona segura del banner (la que se ve
+en celular) es 1546×423 centrada, y el script deja el texto ahí.
 
 ## Estructura
 

@@ -1,4 +1,4 @@
-# reel.ps1 - Renderizador generico de reels Furia Nation (guiado por JSON)
+﻿# reel.ps1 - Renderizador generico de reels Furia Nation (guiado por JSON)
 #
 # Tipos: versus | fotos | footage
 #
@@ -26,14 +26,49 @@ $tipo = $cfg.tipo
 if (-not $tipo) { throw "El JSON necesita 'tipo' (versus|fotos|footage)" }
 Write-Output ("=== REEL: " + $cfg.id + "  [" + $tipo + "]")
 
+# ---------- color de acento ----------
+# "acento": "00C8FF" (RRGGBB). Pinta la letra destacada de cada subtitulo.
+# Default: cian de la marca (el de la "neta" del logo y los ojos del robot).
+$script:acentoAss = "&H00FFC800&"
+if ($cfg.acento) {
+  $hex = ("$($cfg.acento)" -replace '#','').ToUpper()
+  if ($hex -match '^[0-9A-F]{6}$') {
+    $script:acentoAss = ("&H00" + $hex.Substring(4,2) + $hex.Substring(2,2) + $hex.Substring(0,2) + "&")
+  } else {
+    Write-Output ("AVISO: acento invalido '" + $cfg.acento + "'; se usa el cian")
+  }
+}
+
+# ---------- control de reutilizacion de imagenes ----------
+foreach ($bloque in @($cfg.a, $cfg.b)) {
+  if (-not $bloque -or -not $bloque.visual) { continue }
+  $usos = @{}
+  foreach ($p in @($bloque.visual)) {
+    if (-not $p.archivo) { continue }
+    $k = "$($p.archivo)"
+    if ($usos.ContainsKey($k)) { $usos[$k]++ } else { $usos[$k] = 1 }
+  }
+  foreach ($k in $usos.Keys) {
+    if ($usos[$k] -gt 3) { throw ("Imagen usada {0} veces (maximo 3): {1}" -f $usos[$k], $k) }
+    elseif ($usos[$k] -gt 2) { Write-Output ("AVISO: imagen usada {0} veces: {1}" -f $usos[$k], $k) }
+  }
+}
+
 # ---------- voz ----------
 function AsegurarVoz($bloque, [string]$sufijo) {
   if ($bloque.vozArchivo -and (Test-Path $bloque.vozArchivo)) { return $bloque.vozArchivo }
   if (-not $bloque.vozTexto) { throw "Falta vozTexto o vozArchivo en el bloque $sufijo" }
   $out = "02-voz/$($cfg.id)-$sufijo.mp3"
+  $srt = "02-voz/$($cfg.id)-$sufijo.srt"
+  # Reuso opcional: "reusarVoz": true evita volver a gastar cuota de Gemini.
+  if ($cfg.reusarVoz -and (Test-Path $out) -and ((-not $cfg.subtitulos) -or (Test-Path $srt))) {
+    Write-Host ("  reuso de voz: " + $out)
+    return $out
+  }
   $txt = "logs/_voz-$($cfg.id)-$sufijo.txt"
   [IO.File]::WriteAllText((Join-Path $PWD $txt), $bloque.vozTexto, (New-Object System.Text.UTF8Encoding($false)))
-  $voz = if ($cfg.voz) { $cfg.voz } else { "es-MX-JorgeNeural" }
+  $esGemini = ("$($cfg.vozMotor)" -eq "gemini")
+  $voz = if ($cfg.voz) { $cfg.voz } else { if ($esGemini) { "Iapetus" } else { "es-MX-JorgeNeural" } }
   # "vozDecir" = lo que el TTS pronuncia (siglas/decimales escritos como se leen).
   # "mostrar"  = mapa "frase hablada" -> "texto en pantalla" para los subtitulos.
   $mapa = $null
@@ -44,19 +79,51 @@ function AsegurarVoz($bloque, [string]$sufijo) {
     $mapaJson = "logs/_voz-$($cfg.id)-$sufijo.json"
     [IO.File]::WriteAllText((Join-Path $PWD $mapaJson), ($mapa | ConvertTo-Json -Depth 5), (New-Object System.Text.UTF8Encoding($false)))
   }
-  if ($cfg.subtitulos) {
-    $srt = "02-voz/$($cfg.id)-$sufijo.srt"
-    $argMapa = if ($mapa) { $mapaJson } else { "-" }
-    & python scripts/tts-palabras.py $txt $voz $out $srt $argMapa | Out-Null
-  } else {
-    $fuente = if ($bloque.vozDecir) {
-      $txtDecir = "logs/_decir-$($cfg.id)-$sufijo.txt"
-      [IO.File]::WriteAllText((Join-Path $PWD $txtDecir), $bloque.vozDecir, (New-Object System.Text.UTF8Encoding($false)))
-      $txtDecir
-    } else { $txt }
-    & python -m edge_tts --voice $voz --file $fuente --write-media $out | Out-Null
+  # Texto que se sintetiza: vozDecir si existe, si no vozTexto.
+  $fuente = $txt
+  if ($bloque.vozDecir) {
+    $txtDecir = "logs/_decir-$($cfg.id)-$sufijo.txt"
+    [IO.File]::WriteAllText((Join-Path $PWD $txtDecir), $bloque.vozDecir, (New-Object System.Text.UTF8Encoding($false)))
+    $fuente = $txtDecir
   }
-  if (-not (Test-Path $out)) { throw "edge-tts no genero $out" }
+  $usarGemini = $esGemini
+  $vozEdge = if ($cfg.vozFallback) { $cfg.vozFallback } else { "es-MX-JorgeNeural" }
+
+  if ($usarGemini) {
+    # Gemini TTS: sintetiza el audio y despues alinea el SRT con Whisper.
+    $modelo = if ($cfg.vozModelo) { $cfg.vozModelo } else { "gemini-2.5-flash-preview-tts" }
+    $g = (& python scripts/gemini-tts.py $fuente $voz $out $modelo 2>&1 | Out-String).Trim()
+    $code = $LASTEXITCODE
+    if ($code -ne 0 -or -not (Test-Path $out)) {
+      if ($cfg.sinFallback) { throw ("Gemini TTS fallo (codigo $code). " + $g) }
+      $motivo = if ($code -eq 2) { "sin cuota" } else { "error $code" }
+      Write-Host ("  AVISO: Gemini TTS $motivo -> se usa " + $vozEdge)
+      $usarGemini = $false
+      Remove-Item $out -Force -ErrorAction SilentlyContinue
+      Remove-Item $srt -Force -ErrorAction SilentlyContinue
+    } elseif ($cfg.subtitulos) {
+      $argMapa = if ($mapa) { $mapaJson } else { "-" }
+      $modeloAsr = if ($cfg.vozAsr) { $cfg.vozAsr } else { "base" }
+      $ali = (& python scripts/alinear-srt.py $out $fuente $srt $argMapa $modeloAsr | Out-String).Trim()
+      Write-Host ("  " + $ali)
+      if (-not (Test-Path $srt)) {
+        if ($cfg.sinFallback) { throw "No se pudo alinear el SRT de $out" }
+        Write-Host "  AVISO: no se pudo alinear el SRT -> se regenera con edge-tts"
+        $usarGemini = $false
+        Remove-Item $out -Force -ErrorAction SilentlyContinue
+      }
+    }
+  }
+
+  if (-not $usarGemini) {
+    if ($cfg.subtitulos) {
+      $argMapa = if ($mapa) { $mapaJson } else { "-" }
+      & python scripts/tts-palabras.py $fuente $vozEdge $out $srt $argMapa | Out-Null
+    } else {
+      & python -m edge_tts --voice $vozEdge --file $fuente --write-media $out | Out-Null
+    }
+  }
+  if (-not (Test-Path $out)) { throw "El TTS no genero $out" }
   return $out
 }
 
@@ -96,7 +163,7 @@ function Srt2Ass([string]$srtPath, [string]$assPath, [double]$offsetSeg) {
       if ($letras.Count -eq 0) { $pos = -1 } else { $pos = $letras[[math]::Floor($letras.Count / 2)].Index }
     }
     if ($pos -ge 0 -and $pos -lt $texto.Length) {
-      $texto = $texto.Substring(0, $pos) + "{\c&H00A5FF&}" + $texto.Substring($pos, 1) + "{\c&H00FFFFFF&}" + $texto.Substring($pos + 1)
+      $texto = $texto.Substring(0, $pos) + "{\c$($script:acentoAss)}" + $texto.Substring($pos, 1) + "{\c&H00FFFFFF&}" + $texto.Substring($pos + 1)
     }
     # un pelo de extension para que no parpadee
     $eventos += ("Dialogue: 0,{0},{1},Impacto,,0,0,0,,{2}" -f (Tiempo-Ass ($ini + $offsetSeg)), (Tiempo-Ass ($fin + $offsetSeg)), $texto)
@@ -155,6 +222,46 @@ Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
   return 1
 }
 
+# ---------- cta final: like / comenta / suscribete ----------
+function Cta2Ass([string]$texto, [string]$assPath, [double]$dur, [double]$total) {
+  $t = $texto.Trim().ToUpper()
+  $t = $t -replace "\\n", "\N"
+  $t = $t -replace "`r?`n", "\N"
+  # la ultima linea (SUSCRIBETE) en cian de la marca
+  $lineas = $t -split "\\N"
+  if ($lineas.Count -ge 2) {
+    $lineas[$lineas.Count - 1] = "{\c&H00FFC800&}" + $lineas[$lineas.Count - 1] + "{\c&H00FFFFFF&}"
+    $t = $lineas -join "\N"
+  }
+  $maxLen = 0
+  foreach ($ln in ($t -split "\\N")) { if ($ln.Length -gt $maxLen) { $maxLen = $ln.Length } }
+  $size = 120
+  if ($maxLen -gt 0) {
+    $ancho = $maxLen * 0.58 * $size
+    if ($ancho -gt 900) { $size = [math]::Floor(900 / ($maxLen * 0.58)) }
+  }
+  $inicio = [math]::Max(0, $total - $dur)
+  $t = "{\fad(150,120)}$t"
+  $cab = @"
+[Script Info]
+ScriptType: v4.00+
+PlayResX: 1080
+PlayResY: 1920
+WrapStyle: 0
+ScaledBorderAndShadow: yes
+
+[V4+ Styles]
+Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding
+Style: Cta,Impact,$size,&H00FFFFFF,&H00FFFFFF,&H00000000,&H80000000,1,1,0,0,100,100,1,0,1,9,4,8,40,40,300,1
+
+[Events]
+Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text
+"@
+  $evento = ("Dialogue: 0,{0},{1},Cta,,0,0,0,,{2}" -f (Tiempo-Ass $inicio), (Tiempo-Ass $total), $t)
+  [IO.File]::WriteAllText((Join-Path $PWD $assPath), ($cab + "`r`n" + $evento + "`r`n"), (New-Object System.Text.UTF8Encoding($false)))
+  return 1
+}
+
 # ---------- visual ----------
 $inputArgs = @()
 $filters = @()
@@ -179,14 +286,23 @@ function AnadirPlano($plano, [double]$durEfectiva) {
   }
   $zp = if ($zExpr) { ",zoompan=z='$zExpr':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':d=1:s=1080x1920:fps=30" } else { "" }
 
+  # Antitemblor: zoompan redondea x/y a pixeles enteros y el paneo "tiembla".
+  # Procesando la foto a 2x y entregando 1080x1920, cada paso es medio pixel.
+  $ss = if ($null -ne $cfg.zoomSuave) { [double]$cfg.zoomSuave } else { 3.0 }
+  if (-not $zExpr -or $plano.tipo -ne "foto") { $ss = 1.0 }
+  if ($ss -lt 1) { $ss = 1.0 }
+  $wSS = [int](1080 * $ss)
+  $hSS = [int](1920 * $ss)
+  $fgSS = [int](1040 * $ss)
+
   if ($plano.tipo -eq "foto") {
     $script:inputArgs += @("-loop","1","-framerate","30","-t",(F $durEfectiva),"-i",$plano.archivo)
     if ($modo -eq "blurfill") {
-      $script:filters += "[$i`:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,gblur=sigma=30,eq=brightness=-0.20:saturation=0.85[bg$i]"
-      $script:filters += "[$i`:v]scale=1040:-2,eq=brightness=0.02:contrast=1.06:saturation=1.10[fg$i]"
+      $script:filters += "[$i`:v]scale=${wSS}:${hSS}:force_original_aspect_ratio=increase,crop=${wSS}:${hSS},gblur=sigma=30,eq=brightness=-0.20:saturation=0.85[bg$i]"
+      $script:filters += "[$i`:v]scale=${fgSS}:-2,eq=brightness=0.02:contrast=1.06:saturation=1.10[fg$i]"
       $script:filters += "[bg$i][fg$i]overlay=(W-w)/2:(H-h)/2$zp,setsar=1[$label]"
     } else {
-      $script:filters += "[$i`:v]scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920$zp,eq=contrast=1.06:saturation=1.05,setsar=1[$label]"
+      $script:filters += "[$i`:v]scale=${wSS}:${hSS}:force_original_aspect_ratio=increase,crop=${wSS}:${hSS}$zp,eq=contrast=1.06:saturation=1.05,setsar=1[$label]"
     }
   } else {
     $desde = if ($null -ne $plano.desde) { [double]$plano.desde } else { 0 }
@@ -229,6 +345,7 @@ function VerificarMotor([string]$archivo, [double]$desde, [double]$dur, [string]
   $ventana = 1.5
   $t = 0.0
   $malas = 0
+  $sordas = 0
   $total = 0
   $detalle = @()
   while ($t -lt ($dur - 0.4)) {
@@ -315,7 +432,7 @@ if ($tipo -eq "versus") {
       # tiene motor: sigue el flujo normal (mas abajo)
     } elseif ($cfg.sinMotor) {
       # --- reel SIN motor de auto: solo voz (+ musica opcional) ---
-      $vozEn = if ($null -ne $cfg.vozEn) { [double]$cfg.vozEn } else { $intro }
+      $vozEn = if ($null -ne $cfg.vozEn) { [double]$cfg.vozEn } else { 0.3 }
       $total = $vozEn + $dA + $cola
       Write-Output ("sin motor: voz en {0:N2}s, total {1:N2}s" -f $vozEn, $total)
       $mot = $null
@@ -345,7 +462,8 @@ if ($tipo -eq "versus") {
 }
 
 Write-Output ("TOTAL = {0:N3}s" -f $total)
-$limiteDur = if ($null -ne $cfg.limiteDuracion) { [double]$cfg.limiteDuracion } else { 45.0 }
+if (-not $cfg.musica) { Write-Output "AVISO: el reel no tiene musica de fondo (obligatoria al publicar)" }
+$limiteDur = if ($null -ne $cfg.limiteDuracion) { [double]$cfg.limiteDuracion } else { 70.0 }
 if ($total -gt $limiteDur) { throw ("Reel demasiado largo ({0:N2}s > {1:N0}s): acorta el guion" -f $total, $limiteDur) }
 
 # ================= VISUAL =================
@@ -364,6 +482,7 @@ if ($cfg.subtitulos) {
   $vozInicio = 0.0
   if ($tipo -eq "versus") { $vozInicio = $introA }
   elseif ($cfg.motores) { $vozInicio = $vozEn }
+  elseif ($cfg.sinMotor) { $vozInicio = $vozEn }
   elseif ($cfg.a.motorEntra -eq "inicio") { $vozInicio = $intro }
   $srtPath = "02-voz/$($cfg.id)-a.srt"
   $assPath = "logs/$($cfg.id).ass"
@@ -399,7 +518,20 @@ if ($cfg.gancho) {
   Write-Output ("gancho: '{0}' ({1:N1}s)" -f $cfg.gancho, $durG)
 }
 
-$filters += "$concat,tpad=stop_mode=clone:stop_duration=1,trim=0:$(F $total),setpts=PTS-STARTPTS$subFiltro$ganchoFiltro,format=yuv420p[vout]"
+# CTA final (like / comenta / suscribete) en los ultimos segundos
+$ctaFiltro = ""
+$ctaOn = $true
+if ($null -ne $cfg.cta -and $cfg.cta -is [bool]) { $ctaOn = [bool]$cfg.cta }
+if ($ctaOn) {
+  $textoCta = if ($cfg.cta -is [string] -and "$($cfg.cta)".Trim()) { $cfg.cta } else { "DALE LIKE\nCOMENTA\nSUSCRÍBETE" }
+  $durCta = if ($null -ne $cfg.ctaDur) { [double]$cfg.ctaDur } else { 3.2 }
+  $assCta = "logs/$($cfg.id)-cta.ass"
+  [void](Cta2Ass $textoCta $assCta $durCta $total)
+  $ctaFiltro = ",subtitles=$assCta"
+  Write-Output ("cta: like / comenta / suscribete (ultimos {0:N1}s)" -f $durCta)
+}
+
+$filters += "$concat,tpad=stop_mode=clone:stop_duration=1,trim=0:$(F $total),setpts=PTS-STARTPTS$subFiltro$ganchoFiltro$ctaFiltro,format=yuv420p[vout]"
 $fc = $filters -join ";"
 
 if ($DryRun) {
@@ -496,14 +628,14 @@ if ($tipo -eq "versus") {
       $mezcla = "[voz]"
       $n = 1
       if ($cfg.musica -and $cfg.musica.archivo) {
-        $volMus = if ($null -ne $cfg.musica.vol) { [double]$cfg.musica.vol } else { 0.12 }
+        $volMus = if ($null -ne $cfg.musica.vol) { [double]$cfg.musica.vol } else { 0.15 }
         $audioInputs += @("-stream_loop","-1","-i",$cfg.musica.archivo)
-        $af += ("[{0}:a]volume={1},atrim=0:{2},afade=t=in:st=0:d=1,afade=t=out:st={3}:d=1[mus]" -f $n, (F $volMus), (F $total), (F ($total-1.2)))
+        $af += ("[{0}:a]volume={1},atrim=0:{2},afade=t=in:st=0:d=1,afade=t=out:st={3}:d=0.4[mus]" -f $n, (F $volMus), (F $total), (F ($total-0.5)))
         $mezcla += "[mus]"
         $n++
         Write-Output ("  musica de fondo: " + (Split-Path $cfg.musica.archivo -Leaf) + " al " + ($volMus*100) + "%")
       }
-      $af += ($mezcla + ("amix=inputs={0}:duration=longest:normalize=0,apad,atrim=0:{1},asetpts=PTS-STARTPTS[aout]" -f $n, (F $total)))
+      $af += ($mezcla + ("amix=inputs={0}:duration=longest:normalize=0,apad=whole_dur={1},atrim=0:{1},asetpts=PTS-STARTPTS[aout]" -f $n, (F $total)))
     }
   }
 }

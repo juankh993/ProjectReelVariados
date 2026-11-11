@@ -1,0 +1,27 @@
+{
+  "id": "wifi",
+  "tipo": "fotos",
+  "fecha": "2026-11-10",
+  "salida": "wifi.mp4",
+  "voz": "es-MX-JorgeNeural",
+  "sinMotor": true,
+  "subtitulos": true,
+  "acento": "00C8FF",
+  "gancho": "WIFI NO SIGNIFICA\nLO QUE CREÉS",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.5,
+  "limiteDuracion": 70,
+  "a": {
+    "vozTexto": "WiFi no significa 'Wireless Fidelity'. No es un acrónimo de nada. En 1999, una agencia de marketing inventó el nombre para una tecnología que se llamaba, en serio, 'Wireless Ethernet Compatibility Alliance'. Buscaban algo que sonara a 'hi-fi', como los equipos de audio de los ochenta. Así nació 'Wi-Fi': un nombre comercial pegadizo, sin significado técnico. Y funcionó demasiado bien: hoy mucha gente cree que es una sigla, y hasta hay empresas que lo escriben 'WIFI' en mayúsculas como si lo fuera. El nombre no explica cómo funciona; solo vende mejor que el original. ¿Vos pensabas que significaba algo?",
+    "visual": [
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/wifi-router-1.jpg", "dur": 8.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/wifi-router-3.jpg", "dur": 8.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/smartphone-internet-3.jpg", "dur": 8.0, "zoom": "in2" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/wifi-router-1.jpg", "dur": 8.0, "zoom": "out" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/wifi-router-3.jpg", "dur": 8.0, "zoom": "in" },
+      { "tipo": "foto", "archivo": "03-visual/fotos/wifi/smartphone-internet-3.jpg", "dur": null, "zoom": "out" }
+    ]
+  },
+  "musica": { "archivo": "05-musica/deliberate-thought.mp3", "vol": 0.15 }
+}
