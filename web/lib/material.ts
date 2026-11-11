@@ -7,15 +7,40 @@ const VID = new Set([".mp4", ".mov", ".webm"]);
 export type Material = {
   ruta: string; // relativa a la raíz del pipeline
   tipo: "foto" | "video";
+  carpeta: string;
   tokens: string[];
+};
+
+export type Opciones = {
+  /** Puntaje mínimo para aceptar un material local. 0 = aceptar cualquiera. */
+  minimo?: number;
+  /** Carpeta usada en la escena anterior: se evita repetirla. */
+  evitarCarpeta?: string;
+  /** Tipos permitidos. */
+  tipos?: Array<"foto" | "video">;
 };
 
 function normalizar(texto: string): string {
   return texto
     .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/\.[a-z0-9]+$/, "")
     .replace(/[^a-z0-9]+/g, " ")
     .trim();
+}
+
+/** Palabras vacías: no aportan a la búsqueda y generan falsos positivos. */
+const VACIAS = new Set([
+  "the", "and", "with", "for", "from", "into", "over", "that", "this", "una", "uno",
+  "unos", "unas", "con", "por", "para", "del", "los", "las", "que", "sobre", "como",
+  "molto", "very", "close", "shot", "view", "dark", "night",
+]);
+
+export function palabrasClave(consulta: string): string[] {
+  return normalizar(consulta)
+    .split(" ")
+    .filter((p) => p.length >= 3 && !VACIAS.has(p));
 }
 
 /** Recorre una carpeta y devuelve imágenes y videos con sus palabras clave. */
@@ -41,7 +66,12 @@ export function escanear(raiz: string, subcarpeta = "03-visual"): Material[] {
       if (!tipo) continue;
 
       const rel = path.relative(raiz, completo).split(path.sep).join("/");
-      salida.push({ ruta: rel, tipo, tokens: normalizar(rel).split(" ").filter(Boolean) });
+      salida.push({
+        ruta: rel,
+        tipo,
+        carpeta: path.dirname(rel),
+        tokens: normalizar(rel).split(" ").filter(Boolean),
+      });
     }
   };
 
@@ -49,53 +79,72 @@ export function escanear(raiz: string, subcarpeta = "03-visual"): Material[] {
   return salida;
 }
 
-/** Puntúa un material contra las palabras de la consulta. */
 function puntuar(m: Material, palabras: string[]): number {
   let puntos = 0;
   for (const p of palabras) {
-    if (p.length < 3) continue;
-    if (m.tokens.some((t) => t === p)) puntos += 3;
+    if (m.tokens.some((t) => t === p)) puntos += 4;
     else if (m.tokens.some((t) => t.startsWith(p) || p.startsWith(t))) puntos += 2;
-    else if (m.tokens.some((t) => t.includes(p))) puntos += 1;
+    else if (p.length >= 5 && m.tokens.some((t) => t.includes(p))) puntos += 1;
   }
   return puntos;
 }
 
 /**
- * Elige el mejor material para una escena.
- * Si nada coincide, devuelve el primero no usado (así nunca queda una escena vacía).
+ * Elige el mejor material local para una escena.
+ * Devuelve null si nada alcanza el mínimo: así NO se mete material de otro tema.
  */
 export function elegirMaterial(
   material: Material[],
   consulta: string,
   usados: Set<string>,
-  preferir: "foto" | "video" | "cualquiera" = "cualquiera",
+  opciones: Opciones = {},
 ): Material | null {
-  const palabras = normalizar(consulta).split(" ").filter((p) => p.length >= 3);
-
-  const candidatos = material.filter(
-    (m) => preferir === "cualquiera" || m.tipo === preferir,
-  );
-  if (candidatos.length === 0) return material[0] ?? null;
+  const { minimo = 2, evitarCarpeta = "", tipos = ["foto", "video"] } = opciones;
+  const palabras = palabrasClave(consulta);
+  if (palabras.length === 0) return null;
 
   let mejor: Material | null = null;
-  let mejorPuntos = -1;
+  let mejorPuntos = 0;
 
-  for (const m of candidatos) {
-    const base = puntuar(m, palabras);
-    if (base === 0) continue;
-    const puntos = base + (usados.has(m.ruta) ? 0 : 1.5);
+  for (const m of material) {
+    if (usados.has(m.ruta)) continue;
+    if (!tipos.includes(m.tipo)) continue;
+
+    let puntos = puntuar(m, palabras);
+    if (puntos === 0) continue;
+
+    // Variedad: no repetir la carpeta de la escena anterior.
+    if (m.carpeta === evitarCarpeta) puntos -= 3;
+    // Las fotos suelen verse mejor que los clips con texto quemado.
+    if (m.tipo === "foto") puntos += 0.5;
+
     if (puntos > mejorPuntos) {
       mejorPuntos = puntos;
       mejor = m;
     }
   }
 
-  if (mejor && mejorPuntos > 0) return mejor;
+  return mejorPuntos >= minimo ? mejor : null;
+}
 
-  // Sin coincidencias: el primero libre, si no el primero de todos.
-  const libre = candidatos.find((m) => !usados.has(m.ruta));
-  return libre ?? candidatos[0] ?? null;
+/** Reserva: solo fotos de 03-visual/fotos (material genérico, sin infografías). */
+export function elegirGenerico(
+  material: Material[],
+  usados: Set<string>,
+  evitarCarpeta = "",
+): Material | null {
+  const fotos = material.filter((m) => m.tipo === "foto" && m.carpeta.startsWith("03-visual/fotos"));
+  const libres = fotos.filter((m) => !usados.has(m.ruta));
+
+  if (libres.length === 0) {
+    const cualquiera = material.filter((m) => !usados.has(m.ruta));
+    return cualquiera[0] ?? fotos[0] ?? material[0] ?? null;
+  }
+
+  // Preferir una carpeta distinta a la anterior.
+  const distintas = libres.filter((m) => m.carpeta !== evitarCarpeta);
+  const grupo = distintas.length ? distintas : libres;
+  return grupo[Math.floor(Math.random() * grupo.length)];
 }
 
 /** Lista de pistas de música disponibles. */

@@ -94,3 +94,9 @@
 | 2026-11-10 | `03-visual/nasa/bh-img/black-hole-6.jpg` | NASA | Dominio público | NASA | piloto agujeros |
 | 2026-11-10 | `03-visual/fotos/ligo/observatory-1.jpg` | Pixabay | Pixabay License | astrovariable | piloto agujeros |
 | 2026-11-10 | `05-musica/frozen-star.mp3` | Incompetech | CC BY 4.0 | Kevin MacLeod | piloto agujeros |
+| 2026-11-11 | `03-visual/clips/parker-2d.mp4` | propia (`sim-parker.py`) | propia | — | reel parker |
+| 2026-11-11 | `03-visual/nasa/parker/parker-solar-probe-1.JPG` | NASA | Dominio público | NASA | reel parker |
+| 2026-11-11 | `03-visual/nasa/parker/parker-solar-probe-2.JPG` | NASA | Dominio público | NASA | reel parker |
+| 2026-11-11 | `03-visual/nasa/sol/sun-corona-2.jpg` | NASA | Dominio público | NASA | reel parker |
+| 2026-11-11 | `03-visual/nasa/sol/sun-corona-3.jpg` | NASA | Dominio público | NASA | reel parker |
+| 2026-11-11 | `05-musica/frozen-star.mp3` | Incompetech | CC BY 4.0 | Kevin MacLeod | reel parker |

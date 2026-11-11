@@ -51,6 +51,13 @@ function peso(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+function formatoDur(seg?: number) {
+  if (!seg || seg < 0) return "—";
+  const m = Math.floor(seg / 60);
+  const s = Math.round(seg % 60);
+  return m > 0 ? `${m} min ${String(s).padStart(2, "0")}s` : `${s}s`;
+}
+
 type ResumenPlan = {
   titulo: string;
   gancho: string;
@@ -59,26 +66,43 @@ type ResumenPlan = {
   cierre: string;
 };
 
-function resumenPlan(raw?: string | null): ResumenPlan | null {
+type EscenaPlan = {
+  n?: number;
+  descripcion?: string;
+  busqueda?: string;
+  dur?: number;
+  movimiento?: string;
+};
+
+type PlanObj = {
+  titulo?: string;
+  gancho?: string;
+  vozTexto?: string;
+  duracion?: number;
+  escenas?: EscenaPlan[];
+  musica?: string;
+  cierre?: string;
+};
+
+function leerPlan(raw?: string | null): PlanObj | null {
   if (!raw) return null;
   try {
-    const p = JSON.parse(raw) as {
-      titulo?: string;
-      gancho?: string;
-      duracion?: number;
-      escenas?: unknown[];
-      cierre?: string;
-    };
-    return {
-      titulo: p.titulo || "Sin título",
-      gancho: p.gancho || "",
-      duracion: typeof p.duracion === "number" ? p.duracion : 0,
-      escenas: Array.isArray(p.escenas) ? p.escenas.length : 0,
-      cierre: p.cierre || "",
-    };
+    return JSON.parse(raw) as PlanObj;
   } catch {
     return null;
   }
+}
+
+function resumenPlan(raw?: string | null): ResumenPlan | null {
+  const p = leerPlan(raw);
+  if (!p) return null;
+  return {
+    titulo: p.titulo || "Sin título",
+    gancho: p.gancho || "",
+    duracion: typeof p.duracion === "number" ? p.duracion : 0,
+    escenas: Array.isArray(p.escenas) ? p.escenas.length : 0,
+    cierre: p.cierre || "",
+  };
 }
 
 export default function Page() {
@@ -102,8 +126,17 @@ export default function Page() {
   const [pensando, setPensando] = useState(false);
   const [motor, setMotor] = useState<string>("");
   const [plan, setPlan] = useState<string | null>(null);
-  const [job, setJob] = useState<{ id: string; estado: string; progreso: number; mensaje: string } | null>(null);
+  const [job, setJob] = useState<{
+    id: string;
+    estado: string;
+    progreso: number;
+    mensaje: string;
+    estimado?: number;
+    transcurrido?: number;
+  } | null>(null);
   const [generando, setGenerando] = useState(false);
+  const [editor, setEditor] = useState(false);
+  const [borrador, setBorrador] = useState<PlanObj | null>(null);
 
   const [yt, setYt] = useState<EstadoYT | null>(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
@@ -261,6 +294,8 @@ export default function Page() {
           progreso?: number;
           mensaje?: string;
           video?: string | null;
+          estimadoSegundos?: number;
+          transcurridoSegundos?: number;
           error?: string;
         };
         if (s.error) throw new Error(s.error);
@@ -270,6 +305,8 @@ export default function Page() {
           estado: s.estado || "renderizando",
           progreso: s.progreso ?? 0,
           mensaje: s.mensaje || "",
+          estimado: s.estimadoSegundos,
+          transcurrido: s.transcurridoSegundos,
         });
 
         if (s.estado === "listo") {
@@ -629,24 +666,39 @@ export default function Page() {
                       <div className="progreso">
                         <div className="barra" style={{ width: `${Math.max(3, job.progreso)}%` }} />
                         <span>
-                          {job.estado === "listo" ? "Listo" : job.mensaje || job.estado}
-                          {job.estado !== "listo" ? ` · ${job.progreso}%` : ""}
+                          {job.estado === "listo"
+                            ? `Listo en ${formatoDur(job.transcurrido)}`
+                            : `${job.mensaje || job.estado} · ${job.progreso}%${
+                                job.estimado ? ` · faltan ~${formatoDur(Math.max(5, job.estimado - (job.transcurrido ?? 0)))}` : ""
+                              }`}
                         </span>
                       </div>
                     )}
                   </div>
-                  <button className="button primary" onClick={generarReel} disabled={generando}>
-                    {generando ? (
-                      <>
-                        <span className="spinner" />
-                        Generando…
-                      </>
-                    ) : job?.estado === "listo" ? (
-                      "Generar otra versión →"
-                    ) : (
-                      "Generar reel →"
-                    )}
-                  </button>
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <button
+                      className="button ghost"
+                      onClick={() => {
+                        setBorrador(leerPlan(plan));
+                        setEditor(true);
+                      }}
+                      disabled={generando}
+                    >
+                      Editar guion
+                    </button>
+                    <button className="button primary" onClick={generarReel} disabled={generando}>
+                      {generando ? (
+                        <>
+                          <span className="spinner" />
+                          Generando…
+                        </>
+                      ) : job?.estado === "listo" ? (
+                        "Generar otra versión →"
+                      ) : (
+                        "Generar reel →"
+                      )}
+                    </button>
+                  </div>
                 </section>
               );
             })()}
@@ -910,6 +962,132 @@ export default function Page() {
                 ) : (
                   "Publicar"
                 )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {editor && borrador && (
+        <div className="modal-backdrop" onClick={() => setEditor(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h2>Editar el guion</h2>
+            <p style={{ color: "var(--muted)", fontSize: 12.5, margin: 0 }}>
+              Ajustá el texto antes de generar. Los cambios se aplican a este render.
+            </p>
+
+            <div className="field">
+              <label>TÍTULO</label>
+              <input
+                type="text"
+                value={borrador.titulo ?? ""}
+                onChange={(e) => setBorrador({ ...borrador, titulo: e.target.value })}
+              />
+            </div>
+
+            <div className="field">
+              <label>GANCHO (dos líneas separadas con |)</label>
+              <input
+                type="text"
+                value={borrador.gancho ?? ""}
+                onChange={(e) => setBorrador({ ...borrador, gancho: e.target.value })}
+              />
+              <div className="hint">Ej: NO CONTESTES SI TE LLAMAN|A LAS TRES DE LA MAÑANA</div>
+            </div>
+
+            <div className="field">
+              <label>GUION (lo que dice la voz)</label>
+              <textarea
+                style={{ minHeight: 150 }}
+                value={borrador.vozTexto ?? ""}
+                onChange={(e) => setBorrador({ ...borrador, vozTexto: e.target.value })}
+              />
+              <div className="hint">
+                {(borrador.vozTexto ?? "").length} caracteres · ≈{" "}
+                {Math.round((borrador.vozTexto ?? "").length / 13)}s de voz
+              </div>
+            </div>
+
+            <div className="field row-2">
+              <div>
+                <label>CIERRE (la pregunta final)</label>
+                <input
+                  type="text"
+                  value={borrador.cierre ?? ""}
+                  onChange={(e) => setBorrador({ ...borrador, cierre: e.target.value })}
+                />
+              </div>
+              <div>
+                <label>DURACIÓN OBJETIVO (s)</label>
+                <input
+                  type="number"
+                  value={borrador.duracion ?? 30}
+                  onChange={(e) => setBorrador({ ...borrador, duracion: Number(e.target.value) })}
+                />
+              </div>
+            </div>
+
+            <div className="field">
+              <label>ESCENAS ({(borrador.escenas ?? []).length})</label>
+              <div className="escenas-editor">
+                {(borrador.escenas ?? []).map((esc, i) => (
+                  <div className="escena-fila" key={i}>
+                    <span className="num">{i + 1}</span>
+                    <div className="campos">
+                      <input
+                        type="text"
+                        value={esc.descripcion ?? ""}
+                        placeholder="qué se ve"
+                        onChange={(e) => {
+                          const escenas = [...(borrador.escenas ?? [])];
+                          escenas[i] = { ...esc, descripcion: e.target.value };
+                          setBorrador({ ...borrador, escenas });
+                        }}
+                      />
+                      <input
+                        type="text"
+                        value={esc.busqueda ?? ""}
+                        placeholder="búsqueda en inglés"
+                        onChange={(e) => {
+                          const escenas = [...(borrador.escenas ?? [])];
+                          escenas[i] = { ...esc, busqueda: e.target.value };
+                          setBorrador({ ...borrador, escenas });
+                        }}
+                      />
+                    </div>
+                    <input
+                      className="dur"
+                      type="number"
+                      step="0.5"
+                      value={esc.dur ?? 5}
+                      onChange={(e) => {
+                        const escenas = [...(borrador.escenas ?? [])];
+                        escenas[i] = { ...esc, dur: Number(e.target.value) };
+                        setBorrador({ ...borrador, escenas });
+                      }}
+                    />
+                  </div>
+                ))}
+              </div>
+              <div className="hint">
+                La búsqueda define qué material se descarga o se elige. Cuanto más concreta, mejor.
+              </div>
+            </div>
+
+            <div className="modal-actions">
+              <button className="button ghost" onClick={() => setEditor(false)}>
+                Cancelar
+              </button>
+              <button
+                className="button primary"
+                onClick={() => {
+                  setPlan(JSON.stringify(borrador, null, 2));
+                  setJob(null);
+                  setEditor(false);
+                  avisar("Guion actualizado");
+                }}
+              >
+                Guardar cambios
               </button>
             </div>
           </div>

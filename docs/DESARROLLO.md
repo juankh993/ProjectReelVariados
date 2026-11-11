@@ -309,3 +309,39 @@ Prueba real (2026-11-10):
 
 Limitacion conocida: el resolver puede elegir capturas de infografias (con texto ya impreso)
 porque solo mira nombres de archivo. Mejora pendiente: puntuar por contenido o por carpeta.
+
+### 2026-11-11 — fix del resolvedor, editor de guion y estimado de tiempo
+
+**BUG reportado por el usuario:** el reel sobre un creepypasta nocturno arrancaba con
+**dos agujeros negros**. Causa exacta: en `elegirMaterial`, si ninguna palabra de la busqueda
+coincidia con el nombre de un archivo, el codigo hacia
+`candidatos.find(m => !usados.has(m.ruta))` -> **el primer archivo del recorrido**, que era
+`03-visual/clips/bh-2d.mp4` (el clip de agujeros negros del reel anterior).
+Ademas el umbral era 0, asi que "old" hacia match con `old-battery-1.jpg` (una pila para "ascensor").
+
+**Correcciones:**
+1. **Puntaje minimo 2**: ya no se acepta cualquier coincidencia debil.
+2. **Si no hay material local -> se DESCARGA** para esa busqueda con `buscar-unsplash.ps1`
+   (respaldo `buscar-fotos.ps1`), orientacion vertical, cantidad 2, en `03-visual/panel/`.
+   Maximo 6 descargas por render.
+3. **Reserva segura**: si tampoco hay descarga, solo se usan fotos de `03-visual/fotos/`
+   (nunca clips ni infografias de la NASA con texto quemado).
+4. **Variedad**: se penaliza repetir la carpeta de la escena anterior y nunca se repite archivo.
+5. **Palabras vacias** (the, night, dark, close...) fuera del puntaje: generaban falsos positivos.
+
+Medido en el mismo caso: antes 1 clip de agujero negro + 1 pila + la misma cara 3 veces;
+ahora pasillo de hospital, reloj de pared, pasillo con luz al fondo y ojo por la rendija
+(los ultimos descargados de Unsplash).
+
+**Editor de guion:** boton **Editar guion** en la tarjeta del plan. Permite cambiar titulo,
+gancho, guion, cierre, duracion y, por escena, la descripcion, la busqueda y los segundos.
+Al guardar se actualiza el plan y se vuelve a generar.
+
+**Estimado de tiempo:** el trabajo expone `estimadoSegundos`. Calibrado con dos renders reales
+(i3-7100U): 13s/4 escenas ~= 180s; 30s/6 escenas ~= **548s** (el montaje con `zoompan` es lo que
+mas tarda). Formula: `45 + audio*12 + escenas*20`. La barra ahora avanza por tiempo entre hitos
+para no quedarse clavada en 75%.
+
+Límite conocido: la **última escena absorbe todo el tiempo restante**, asi que si la voz es
+mucho mas larga que las escenas, el ultimo plano puede quedar de 8-10s quieto. Mejora pendiente:
+repartir el sobrante en escenas extra.

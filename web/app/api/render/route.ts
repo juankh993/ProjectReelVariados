@@ -34,13 +34,24 @@ export async function GET(request: Request) {
   const trabajo = obtenerTrabajo(id);
   if (!trabajo) return NextResponse.json({ error: "Trabajo no encontrado" }, { status: 404 });
 
+  const transcurrido = Math.round((Date.now() - trabajo.iniciado) / 1000);
+
+  // Barra suave: entre hitos, avanza con el reloj para no quedar clavada.
+  let suave = trabajo.progreso;
+  if (trabajo.estado === "renderizando") {
+    const porTiempo = 10 + (transcurrido / Math.max(30, trabajo.estimadoSegundos)) * 82;
+    suave = Math.min(94, Math.max(trabajo.progreso, Math.round(porTiempo)));
+  }
+
   return NextResponse.json({
     id: trabajo.id,
     estado: trabajo.estado,
-    progreso: trabajo.progreso,
+    progreso: suave,
     mensaje: trabajo.mensaje,
     video: trabajo.video ?? null,
     config: trabajo.config ?? null,
+    estimadoSegundos: trabajo.estimadoSegundos,
+    transcurridoSegundos: transcurrido,
     log: trabajo.log.slice(-12),
   });
 }

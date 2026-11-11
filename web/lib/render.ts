@@ -2,7 +2,14 @@ import fs from "node:fs";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { ROOT } from "./config";
-import { elegirMaterial, escanear, musicaDisponible, type Material } from "./material";
+import {
+  elegirGenerico,
+  elegirMaterial,
+  escanear,
+  musicaDisponible,
+  palabrasClave,
+  type Material,
+} from "./material";
 
 /** Raíz del pipeline (un nivel arriba de web/). */
 export const PIPELINE = path.resolve(ROOT, "..");
@@ -34,6 +41,7 @@ export type EstadoTrabajo = {
   config?: string;
   log: string[];
   iniciado: number;
+  estimadoSegundos: number;
   terminado?: number;
 };
 
@@ -44,13 +52,15 @@ export function obtenerTrabajo(id: string): EstadoTrabajo | undefined {
 }
 
 function slug(texto: string): string {
-  return texto
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 40) || "reel";
+  return (
+    texto
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "reel"
+  );
 }
 
 function hoy(): string {
@@ -58,38 +68,136 @@ function hoy(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-/** Arma la config que entiende scripts/reel.ps1 a partir del plan del chat. */
-export function construirConfig(
+function ejecutar(
+  comando: string,
+  args: string[],
+  cwd: string,
+  onLinea: (linea: string) => void,
+): Promise<number> {
+  return new Promise((resolve) => {
+    const hijo = spawn(comando, args, { cwd, windowsHide: true });
+
+    const leer = (buffer: Buffer) => {
+      for (const linea of buffer.toString("utf8").split(/\r?\n/)) {
+        const limpia = linea.trim();
+        if (limpia) onLinea(limpia);
+      }
+    };
+
+    hijo.stdout?.on("data", leer);
+    hijo.stderr?.on("data", leer);
+    hijo.on("error", (e) => {
+      onLinea(`ERROR al lanzar el proceso: ${e.message}`);
+      resolve(-1);
+    });
+    hijo.on("close", (codigo) => resolve(codigo ?? -1));
+  });
+}
+
+/** Descarga fotos nuevas para una búsqueda concreta (Unsplash → Pixabay). */
+async function descargarFotos(consulta: string, anotar: (l: string) => void): Promise<boolean> {
+  const palabras = palabrasClave(consulta);
+  if (palabras.length === 0) return false;
+
+  const query = palabras.slice(0, 4).join(" ");
+  const salida = "03-visual/panel";
+
+  const intentos: Array<[string, string[]]> = [
+    [
+      "buscar-unsplash.ps1",
+      ["-Query", query, "-Cantidad", "2", "-Orientacion", "vertical", "-Salida", salida, "-TrackDownload"],
+    ],
+    [
+      "buscar-fotos.ps1",
+      ["-Query", query, "-Cantidad", "2", "-Orientacion", "vertical", "-Salida", salida],
+    ],
+  ];
+
+  for (const [script, args] of intentos) {
+    const ruta = path.join(PIPELINE, "scripts", script);
+    if (!fs.existsSync(ruta)) continue;
+
+    anotar(`  buscando material nuevo: "${query}" con ${script}`);
+    const codigo = await ejecutar("powershell.exe", ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", ruta, ...args], PIPELINE, anotar);
+    if (codigo === 0) return true;
+  }
+  return false;
+}
+
+type Resuelta = { material: Material; dur: number; movimiento: string };
+
+/**
+ * Resuelve el material de cada escena:
+ *  1) material local que coincida de verdad
+ *  2) si no hay, descarga fotos nuevas para esa búsqueda
+ *  3) si tampoco, una foto genérica (nunca un clip o infografía de otro tema)
+ */
+async function resolverEscenas(
   plan: Plan,
-  material: Material[],
-  factor = 1,
-): Record<string, unknown> {
+  anotar: (linea: string) => void,
+): Promise<Resuelta[]> {
   const escenas = (plan.escenas ?? []).filter(Boolean);
   if (escenas.length === 0) throw new Error("El plan no tiene escenas.");
 
+  let material = escanear(PIPELINE);
   const usados = new Set<string>();
-  const visual: Array<Record<string, unknown>> = [];
+  const resueltas: Resuelta[] = [];
+
+  let carpetaPrevia = "";
+  let descargas = 0;
 
   for (const e of escenas) {
     const consulta = `${e.busqueda ?? ""} ${e.descripcion ?? ""}`.trim();
-    const elegido = elegirMaterial(material, consulta, usados);
+
+    let elegido = elegirMaterial(material, consulta, usados, {
+      minimo: 2,
+      evitarCarpeta: carpetaPrevia,
+    });
+
+    if (!elegido && consulta && descargas < 6) {
+      descargas++;
+      const ok = await descargarFotos(consulta, anotar);
+      if (ok) {
+        material = escanear(PIPELINE);
+        elegido = elegirMaterial(material, consulta, usados, { minimo: 1 });
+      }
+    }
+
+    if (!elegido) {
+      elegido = elegirGenerico(material, usados, carpetaPrevia);
+      if (elegido) anotar(`  escena "${consulta}": sin coincidencia, se usa material genérico`);
+    }
+
     if (!elegido) continue;
+
     usados.add(elegido.ruta);
+    carpetaPrevia = elegido.carpeta;
 
-    const dur = Math.min(8, Math.max(2.5, Number(e.dur) || 5));
-
-    visual.push({
-      tipo: elegido.tipo,
-      archivo: elegido.ruta,
-      ...(elegido.tipo === "video" ? { desde: 0 } : {}),
-      dur,
-      zoom: e.movimiento === "out" ? "out" : e.movimiento === "none" ? "" : "in",
-      modo: elegido.tipo === "foto" ? "blurfill" : "fill",
-      _busqueda: e.busqueda ?? "",
+    resueltas.push({
+      material: elegido,
+      dur: Math.min(8, Math.max(2.5, Number(e.dur) || 5)),
+      movimiento: e.movimiento === "out" ? "out" : e.movimiento === "none" ? "" : "in",
     });
   }
 
-  if (visual.length === 0) throw new Error("No hay material visual disponible en 03-visual/.");
+  if (resueltas.length === 0) throw new Error("No se pudo resolver ningún visual.");
+  return resueltas;
+}
+
+/** Arma la config que entiende scripts/reel.ps1. */
+export function construirConfig(
+  plan: Plan,
+  resueltas: Resuelta[],
+  factor = 1,
+): Record<string, unknown> {
+  const visual: Array<Record<string, unknown>> = resueltas.map((r) => ({
+    tipo: r.material.tipo,
+    archivo: r.material.ruta,
+    ...(r.material.tipo === "video" ? { desde: 0 } : {}),
+    dur: r.dur,
+    zoom: r.movimiento,
+    modo: r.material.tipo === "foto" ? "blurfill" : "fill",
+  }));
 
   // La última escena absorbe la diferencia de tiempo.
   visual[visual.length - 1].dur = null;
@@ -99,8 +207,7 @@ export function construirConfig(
   const vozTexto = cierre && !voz.includes(cierre) ? `${voz} ${cierre}` : voz;
   if (!vozTexto) throw new Error("El plan no tiene texto de voz.");
 
-  // Los planos fijos NO pueden sumar más que la voz. Estimamos la duración de la voz
-  // (edge-tts en español ≈ 13 caracteres por segundo) y dejamos aire para el último plano.
+  // Los planos fijos no pueden sumar más que la voz (edge ≈ 13 caracteres/segundo).
   const estimadoVoz = Math.max(6, vozTexto.length / 13);
   const objetivoFijos = Math.max(2.5, estimadoVoz * 0.62 * factor);
   const fijos = visual.slice(0, -1);
@@ -134,36 +241,19 @@ export function construirConfig(
   };
 }
 
-function ejecutar(
-  comando: string,
-  args: string[],
-  cwd: string,
-  onLinea: (linea: string) => void,
-): Promise<number> {
-  return new Promise((resolve) => {
-    const hijo = spawn(comando, args, { cwd, windowsHide: true });
-
-    const leer = (buffer: Buffer) => {
-      for (const linea of buffer.toString("utf8").split(/\r?\n/)) {
-        const limpia = linea.trim();
-        if (limpia) onLinea(limpia);
-      }
-    };
-
-    hijo.stdout?.on("data", leer);
-    hijo.stderr?.on("data", leer);
-    hijo.on("error", (e) => {
-      onLinea(`ERROR al lanzar el proceso: ${e.message}`);
-      resolve(-1);
-    });
-    hijo.on("close", (codigo) => resolve(codigo ?? -1));
-  });
+/** Estimación de cuánto va a tardar el render (medida con reels reales). */
+function estimarSegundos(plan: Plan): number {
+  const voz = `${plan.vozTexto ?? ""} ${plan.cierre ?? ""}`.trim();
+  const audio = Math.max(10, voz.length / 13);
+  const escenas = Math.max(3, (plan.escenas ?? []).length);
+  // Calibrado con dos renders reales (i3-7100U):
+  //   13s / 4 escenas -> ~180s · 30s / 6 escenas -> ~548s
+  // El montaje con zoompan es lo que más tarda. Preferimos sobreestimar.
+  return Math.round(45 + audio * 12 + escenas * 20);
 }
 
 /** Lanza el render en segundo plano y devuelve el id del trabajo. */
 export function iniciarRender(plan: Plan): EstadoTrabajo {
-  const material = escanear(PIPELINE);
-
   const fecha = hoy();
   const id = `${fecha}-${slug(String(plan.titulo ?? "reel"))}-${Math.random().toString(36).slice(2, 6)}`;
 
@@ -174,35 +264,36 @@ export function iniciarRender(plan: Plan): EstadoTrabajo {
     mensaje: "Encolado",
     log: [],
     iniciado: Date.now(),
+    estimadoSegundos: estimarSegundos(plan),
   };
   trabajos.set(id, trabajo);
 
   const anotar = (linea: string) => {
     trabajo.log.push(linea);
     if (trabajo.log.length > 400) trabajo.log.shift();
-    if (linea.startsWith("TOTAL") || linea.includes("FINAL:")) trabajo.progreso = 70;
-    if (linea.includes("OK audio")) trabajo.progreso = 55;
-    if (linea.toLowerCase().includes("subtitulo")) trabajo.progreso = 65;
+    if (linea.startsWith("TOTAL") || linea.includes("FINAL:")) trabajo.progreso = 75;
+    if (linea.includes("OK audio")) trabajo.progreso = 60;
   };
 
   void (async () => {
     try {
       trabajo.estado = "renderizando";
-      trabajo.progreso = 8;
-      trabajo.mensaje = "Eligiendo material y preparando el guion…";
+      trabajo.progreso = 5;
+      trabajo.mensaje = "Eligiendo material para cada escena…";
 
       const dirGuiones = path.join(PIPELINE, "01-guiones", fecha);
       fs.mkdirSync(dirGuiones, { recursive: true });
       const configRel = `01-guiones/${fecha}/${id}.json`;
       const configAbs = path.join(PIPELINE, configRel);
 
+      const resueltas = await resolverEscenas(plan, anotar);
+
       let factor = 1;
       let codigo = -1;
       let salidaRel = "";
 
-      // Hasta 3 intentos: si los planos fijos no entran en la voz, se acortan y se repite.
       for (let intento = 0; intento < 3; intento++) {
-        const cfg = construirConfig(plan, material, factor);
+        const cfg = construirConfig(plan, resueltas, factor);
         cfg.id = id;
         cfg.fecha = fecha;
         cfg.salida = `${id}.mp4`;
@@ -212,6 +303,7 @@ export function iniciarRender(plan: Plan): EstadoTrabajo {
         trabajo.config = configRel;
         trabajo.mensaje =
           intento === 0 ? "Generando voz y montando el video…" : `Reintento ${intento}…`;
+        trabajo.progreso = 20;
 
         codigo = await ejecutar(
           "powershell.exe",
@@ -234,8 +326,8 @@ export function iniciarRender(plan: Plan): EstadoTrabajo {
         if (!planosLargos) break;
 
         factor *= 0.55;
-        anotar(`→ Los planos no entraban en la voz: reintento con planos más cortos.`);
-        trabajo.progreso = 8;
+        anotar("→ Los planos no entraban en la voz: reintento con planos más cortos.");
+        trabajo.progreso = 20;
       }
 
       if (codigo !== 0) {
@@ -245,7 +337,7 @@ export function iniciarRender(plan: Plan): EstadoTrabajo {
         return;
       }
 
-      trabajo.progreso = 80;
+      trabajo.progreso = 85;
       trabajo.mensaje = "Normalizando volumen…";
 
       const salidaAbs = path.join(PIPELINE, salidaRel);
