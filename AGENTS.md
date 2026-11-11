@@ -31,6 +31,9 @@
 10. **Ninguna imagen se repite más de 3 veces.** El render falla si se pasa; a las 3 avisa.
 11. **CTA al final:** "DALE LIKE / COMENTA / SUSCRÍBETE" en pantalla los últimos 3 s.
     Es automático; `"cta": false` lo apaga y `"ctaDur"` cambia la duración.
+12. **Retención < 50% = se cambia el tema.** Si un reel no supera el 50%, no se repite
+    ese tema ni ese formato: se pasa a un pilar con retención comprobada (espacio).
+    Priorizar **simulación/demostración** sobre slideshow.
 
 ## Pipeline (comandos)
 

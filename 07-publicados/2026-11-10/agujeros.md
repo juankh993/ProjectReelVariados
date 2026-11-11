@@ -28,7 +28,7 @@ Material: NASA, Pixabay y simulación propia.
 
 ¿Lo sabías? Contame 👇
 
-#Datoneta #Curiosidades #Ciencia #Espacio #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 ## Etiquetas

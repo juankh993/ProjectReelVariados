@@ -1,0 +1,71 @@
+{
+  "tipo": "footage",
+  "fecha": "2026-11-10",
+  "salida": "2026-11-10-el-turno-de-las-tres-m9cg.mp4",
+  "sinMotor": true,
+  "subtitulos": true,
+  "gancho": "NO CONTESTES SI TE LLAMAN POR TU NOMBRE\nA LAS TRES DE LA MAÑANA",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.8,
+  "limiteDuracion": 60,
+  "a": {
+    "vozTexto": "Hay un turno en el hospital que nadie quiere. El de las tres de la mañana. Ahí las luces del pasillo parpadean dos veces, siempre dos. Y cuando suena el ascensor, no baja nadie. Los enfermeros nuevos tienen una sola regla: si escuchás que te llaman por tu nombre desde la habitación vacía, no contestes. Porque esa voz no repite. Espera. Y si te asomás, te va a estar mirando a vos. ¿Vos contestarías o te quedás callado hasta que amanezca?",
+    "visual": [
+      {
+        "tipo": "video",
+        "archivo": "03-visual/clips/bh-2d.mp4",
+        "desde": 0,
+        "dur": 4.2,
+        "zoom": "in",
+        "modo": "fill",
+        "_busqueda": "empty hospital hallway night flickering light"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/tu-cuerpo-brilla/silhouette-dark-room-1.jpg",
+        "dur": 4.2,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "old wall clock dark room close up"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/campana/old-battery-1.jpg",
+        "dur": 4.2,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "old elevator doors opening dark empty"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/tu-cuerpo-brilla/silhouette-dark-room-2.jpg",
+        "dur": 4.2,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "empty hospital room dark bed night"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/tu-cuerpo-brilla/laboratory-dark-1.jpg",
+        "dur": 4.2,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "long dark corridor light at end perspective"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/tu-cuerpo-brilla/portrait-dark-1.jpg",
+        "dur": null,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "eye looking through door gap dark"
+      }
+    ]
+  },
+  "musica": {
+    "archivo": "05-musica/frozen-star.mp3",
+    "vol": 0.14
+  },
+  "id": "2026-11-10-el-turno-de-las-tres-m9cg"
+}

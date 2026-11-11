@@ -33,7 +33,7 @@ Material: NASA.
 
 ¿Lo sabías? Contame 👇
 
-#Datoneta #Curiosidades #Ciencia #Espacio #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 **Comentario para fijar:**
@@ -60,7 +60,7 @@ Material: Pixabay.
 
 ¿Vos pensabas que significaba algo? 👇
 
-#Datoneta #Curiosidades #Tecnología #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 **Comentario para fijar:**
@@ -87,7 +87,7 @@ Material: Pixabay.
 
 ¿Vos sabías de dónde salió la Constitución del 91? 👇
 
-#Datoneta #Curiosidades #Historia #Colombia #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 **Comentario para fijar:**
@@ -114,7 +114,7 @@ Material: Pixabay y Wikimedia Commons (CC0).
 
 ¿Lo sabías? 👇
 
-#Datoneta #Curiosidades #Ciencia #CuerpoHumano #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 **Comentario para fijar:**
@@ -141,7 +141,7 @@ Material: Wikimedia Commons (DavidCWG, CC BY-SA 3.0) y Pixabay.
 
 ¿La apagarías para ver qué tiene adentro? 👇
 
-#Datoneta #Curiosidades #Historia #Ciencia #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 **Comentario para fijar:**

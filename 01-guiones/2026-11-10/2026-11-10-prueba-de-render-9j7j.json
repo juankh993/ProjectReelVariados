@@ -1,0 +1,56 @@
+{
+  "tipo": "footage",
+  "fecha": "2026-11-10",
+  "salida": "2026-11-10-prueba-de-render-9j7j.mp4",
+  "sinMotor": true,
+  "subtitulos": true,
+  "gancho": "ESTO LO HIZO\nEL PANEL",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.8,
+  "limiteDuracion": 60,
+  "a": {
+    "vozTexto": "Este video lo genero el panel solo. Busco las imagenes, escribo la voz y monto todo. Sin abrir un editor. ¿Se nota que lo hizo una maquina?",
+    "visual": [
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/nasa/venus/venus-planet-1.jpg",
+        "dur": 2.37,
+        "zoom": "in",
+        "modo": "blurfill",
+        "_busqueda": "planet space"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/nasa/boomerang/boomerang-nebula-1.jpg",
+        "dur": 2.37,
+        "zoom": "out",
+        "modo": "blurfill",
+        "_busqueda": "nebula"
+      },
+      {
+        "tipo": "video",
+        "archivo": "03-visual/clips/bh-2d.mp4",
+        "desde": 0,
+        "dur": 2,
+        "zoom": "in",
+        "modo": "fill",
+        "_busqueda": "earth"
+      },
+      {
+        "tipo": "video",
+        "archivo": "03-visual/clips/parker-2d.mp4",
+        "desde": 0,
+        "dur": null,
+        "zoom": "out",
+        "modo": "fill",
+        "_busqueda": "galaxy"
+      }
+    ]
+  },
+  "musica": {
+    "archivo": "05-musica/comfortable-mystery.mp3",
+    "vol": 0.14
+  },
+  "id": "2026-11-10-prueba-de-render-9j7j"
+}

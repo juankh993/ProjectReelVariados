@@ -1,0 +1,64 @@
+{
+  "tipo": "footage",
+  "fecha": "2026-11-10",
+  "salida": "2026-11-10-el-turno-de-las-tres-wmay.mp4",
+  "sinMotor": true,
+  "subtitulos": true,
+  "gancho": "NO CONTESTES SI TE LLAMAN POR TU NOMBRE\nA LAS TRES DE LA MAÑANA",
+  "ganchoDur": 1.8,
+  "vozEn": 0.3,
+  "cola": 0.8,
+  "limiteDuracion": 60,
+  "a": {
+    "vozTexto": "Hay un turno en el hospital que nadie quiere: el de las tres de la mañana. Las luces del pasillo parpadean dos veces, siempre dos. Cuando suena el ascensor, no baja nadie. Los enfermeros nuevos tienen una sola regla: si escuchas que te llaman por tu nombre desde la habitacion vacia, no contestes. ¿Vos contestarias o te quedas callado hasta que amanezca?",
+    "visual": [
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/panel/empty-hospital-hallway-pasillo-1.jpg",
+        "dur": 3.53,
+        "zoom": "in",
+        "modo": "blurfill"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/campana/pendulum-clock-1.jpg",
+        "dur": 2.82,
+        "zoom": "in",
+        "modo": "blurfill"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/panel/empty-hospital-hallway-pasillo-2.jpg",
+        "dur": 3.53,
+        "zoom": "in",
+        "modo": "blurfill"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/fotos/tu-cuerpo-brilla/silhouette-dark-room-1.jpg",
+        "dur": 3.53,
+        "zoom": "out",
+        "modo": "blurfill"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/panel/long-corridor-light-end-1.jpg",
+        "dur": 3.53,
+        "zoom": "in",
+        "modo": "blurfill"
+      },
+      {
+        "tipo": "foto",
+        "archivo": "03-visual/panel/eye-looking-through-door-1.jpg",
+        "dur": null,
+        "zoom": "in",
+        "modo": "blurfill"
+      }
+    ]
+  },
+  "musica": {
+    "archivo": "05-musica/deliberate-thought.mp3",
+    "vol": 0.14
+  },
+  "id": "2026-11-10-el-turno-de-las-tres-wmay"
+}
