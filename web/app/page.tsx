@@ -102,6 +102,8 @@ export default function Page() {
   const [pensando, setPensando] = useState(false);
   const [motor, setMotor] = useState<string>("");
   const [plan, setPlan] = useState<string | null>(null);
+  const [job, setJob] = useState<{ id: string; estado: string; progreso: number; mensaje: string } | null>(null);
+  const [generando, setGenerando] = useState(false);
 
   const [yt, setYt] = useState<EstadoYT | null>(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
@@ -231,6 +233,64 @@ export default function Page() {
       ]);
     } finally {
       setPensando(false);
+    }
+  }
+
+  async function generarReel() {
+    if (!plan || generando) return;
+    setGenerando(true);
+    setJob({ id: "", estado: "encolado", progreso: 0, mensaje: "Encolado" });
+
+    try {
+      const res = await fetch("/api/render", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan }),
+      });
+      const data = (await res.json()) as { id?: string; error?: string };
+      if (!res.ok || !data.id) throw new Error(data.error || "No se pudo iniciar el render");
+
+      const id = data.id;
+      setJob({ id, estado: "encolado", progreso: 5, mensaje: "Encolado" });
+
+      for (let intento = 0; intento < 300; intento++) {
+        await new Promise((r) => window.setTimeout(r, 2500));
+        const r2 = await fetch(`/api/render?id=${id}`, { cache: "no-store" });
+        const s = (await r2.json()) as {
+          estado?: string;
+          progreso?: number;
+          mensaje?: string;
+          video?: string | null;
+          error?: string;
+        };
+        if (s.error) throw new Error(s.error);
+
+        setJob({
+          id,
+          estado: s.estado || "renderizando",
+          progreso: s.progreso ?? 0,
+          mensaje: s.mensaje || "",
+        });
+
+        if (s.estado === "listo") {
+          const archivo = await fetch(`/api/render/file?id=${id}`);
+          const blob = await archivo.blob();
+          const f = new File([blob], `reel-${id}.mp4`, { type: "video/mp4" });
+          if (videoUrl) URL.revokeObjectURL(videoUrl);
+          setVideo(f);
+          setVideoUrl(URL.createObjectURL(f));
+          avisar("Reel generado. Ya podés publicarlo.");
+          break;
+        }
+        if (s.estado === "error") {
+          avisar(s.mensaje || "El render falló", true);
+          break;
+        }
+      }
+    } catch (error) {
+      avisar(error instanceof Error ? error.message : "Error al generar el reel", true);
+    } finally {
+      setGenerando(false);
     }
   }
 
@@ -558,21 +618,34 @@ export default function Page() {
               if (!r) return null;
               return (
                 <section className="plan-card">
-                  <div>
+                  <div style={{ flex: 1, minWidth: 220 }}>
                     <p className="eyebrow">PLAN DE PRODUCCIÓN LISTO</p>
                     <h2>{r.titulo}</h2>
                     <p>
                       {r.duracion}s · {r.escenas} escenas
                       {r.cierre ? ` · cierre: “${r.cierre}”` : ""}
                     </p>
+                    {job && (
+                      <div className="progreso">
+                        <div className="barra" style={{ width: `${Math.max(3, job.progreso)}%` }} />
+                        <span>
+                          {job.estado === "listo" ? "Listo" : job.mensaje || job.estado}
+                          {job.estado !== "listo" ? ` · ${job.progreso}%` : ""}
+                        </span>
+                      </div>
+                    )}
                   </div>
-                  <button
-                    className="button primary"
-                    onClick={() =>
-                      avisar("El render automático está en la próxima fase del roadmap", true)
-                    }
-                  >
-                    Generar reel →
+                  <button className="button primary" onClick={generarReel} disabled={generando}>
+                    {generando ? (
+                      <>
+                        <span className="spinner" />
+                        Generando…
+                      </>
+                    ) : job?.estado === "listo" ? (
+                      "Generar otra versión →"
+                    ) : (
+                      "Generar reel →"
+                    )}
                   </button>
                 </section>
               );

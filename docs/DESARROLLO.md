@@ -27,7 +27,7 @@ produzca** (guion → voz → visuales → subtítulos → render → publicaci�
 | Conexión de YouTube multi-usuario | ✅ | Una cuenta por sesión, varios canales |
 | Estado del canal en vivo | ✅ | subs, videos, vistas, avatar |
 | Subida real a YouTube + miniatura | ✅ | Endpoint resumible |
-| **Generación del reel desde el panel** | 🚧 | Diseño cerrado, ver §7 |
+| **Generación del reel desde el panel** | ✅ | Plan del chat → eel.ps1 → MP4 en la preview |
 | Conectores Instagram / TikTok / Facebook | ⏳ | Siguiente |
 | Calendario de publicación | ⏳ | |
 | Exportación CapCut | ⏳ | Último, a pedido del usuario |
@@ -266,3 +266,46 @@ se suma como una escena más: `{ "tipo": "ia", "prompt": "...", "dur": 5 }`.
   Subido a **2000** en DeepSeek y Gemini.
 - Flujo de trabajo elegido: **el plan usa `busqueda` en ingles**, no rutas de archivo: el renderer
   resuelve el material despues (asi el modelo no inventa archivos que no existen).
+
+### 2026-11-11 (cont. 2) — RENDER IMPLEMENTADO
+
+El chat ya no entrega solo el plan: el panel **produce el MP4**.
+
+Flujo completo:
+
+```text
+Chat "quiero un reel sobre X"
+  → DeepSeek devuelve ```plan (JSON)
+  → tarjeta "PLAN DE PRODUCCION LISTO" + boton Generar reel
+  → POST /api/render
+      → escanea 03-visual/ y elige material por palabras clave (lib/material.ts)
+      → escribe 01-guiones/<fecha>/<id>.json en el formato de reel.ps1
+      → ejecuta scripts/reel.ps1 -Config ...   (voz edge + Ken Burns + subtitulos)
+      → ejecuta scripts/fix-loudness.ps1       (-14 LUFS)
+  → GET /api/render?id=... (polling cada 2,5s)
+  → GET /api/render/file?id=... sirve el MP4
+  → la preview lo muestra y "Publicar" lo sube a YouTube
+```
+
+Archivos nuevos:
+- `web/lib/material.ts` — escanea `03-visual/`, puntua nombres contra la busqueda de cada escena.
+- `web/lib/render.ts` — arma la config, lanza los scripts, guarda el estado del trabajo.
+- `web/app/api/render/route.ts` — POST inicia / GET consulta estado.
+- `web/app/api/render/file/route.ts` — entrega el MP4.
+
+Decisiones:
+- **El plan declara `busqueda`, no archivos.** El resolver elige material real; si no hay match,
+  usa el primero libre (nunca queda una escena vacia).
+- **Fix de duracion:** `reel.ps1` aborta si los planos fijos suman mas que la voz.
+  Se estima la voz (13 caracteres/segundo) y se escalan los planos fijos al 62% de esa duracion;
+  si igual falla, **se reintenta hasta 2 veces** con planos mas cortos (factor 0,55).
+- **La salida usa el id del trabajo** (`<fecha>-<slug>-<random>.mp4`), asi no se pisan los renders.
+- La musica se toma al azar de `05-musica/` al 14%.
+
+Prueba real (2026-11-10):
+- Plan de 4 escenas, 18s pedidos → **12,9s** (la voz manda).
+- Salida 1080x1920, h264+aac, 7,7 MB, **-14,5 LUFS / -1,5 dBTP**.
+- Gancho, subtitulos palabra por palabra y musica: OK.
+
+Limitacion conocida: el resolver puede elegir capturas de infografias (con texto ya impreso)
+porque solo mira nombres de archivo. Mejora pendiente: puntuar por contenido o por carpeta.
