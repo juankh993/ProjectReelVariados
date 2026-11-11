@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 type Vista = "estudio" | "proyectos" | "calendario" | "cuentas";
-type Mensaje = { role: "user" | "assistant"; text: string };
+type Mensaje = { role: "user" | "assistant"; text: string; plan?: string };
 type Asset = { id: string; name: string; size: number; type: string };
 type Formato = "vertical" | "horizontal" | "cuadrado";
 
@@ -51,6 +51,36 @@ function peso(bytes: number) {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
+type ResumenPlan = {
+  titulo: string;
+  gancho: string;
+  duracion: number;
+  escenas: number;
+  cierre: string;
+};
+
+function resumenPlan(raw?: string | null): ResumenPlan | null {
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw) as {
+      titulo?: string;
+      gancho?: string;
+      duracion?: number;
+      escenas?: unknown[];
+      cierre?: string;
+    };
+    return {
+      titulo: p.titulo || "Sin título",
+      gancho: p.gancho || "",
+      duracion: typeof p.duracion === "number" ? p.duracion : 0,
+      escenas: Array.isArray(p.escenas) ? p.escenas.length : 0,
+      cierre: p.cierre || "",
+    };
+  } catch {
+    return null;
+  }
+}
+
 export default function Page() {
   const [vista, setVista] = useState<Vista>("estudio");
   const [proyecto, setProyecto] = useState("Mi primer proyecto");
@@ -71,6 +101,7 @@ export default function Page() {
   const [entrada, setEntrada] = useState("");
   const [pensando, setPensando] = useState(false);
   const [motor, setMotor] = useState<string>("");
+  const [plan, setPlan] = useState<string | null>(null);
 
   const [yt, setYt] = useState<EstadoYT | null>(null);
   const [mostrarGuia, setMostrarGuia] = useState(false);
@@ -177,12 +208,22 @@ export default function Page() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages: historial, context: contexto }),
       });
-      const data = (await res.json()) as { reply?: string; error?: string; motor?: string };
+      const data = (await res.json()) as {
+        reply?: string;
+        error?: string;
+        motor?: string;
+        plan?: string | null;
+      };
       setChat((prev) => [
         ...prev,
-        { role: "assistant", text: data.reply || data.error || "No pude responder." },
+        {
+          role: "assistant",
+          text: data.reply || data.error || "No pude responder.",
+          plan: data.plan ?? undefined,
+        },
       ]);
       if (data.motor) setMotor(data.motor);
+      if (data.plan) setPlan(data.plan);
     } catch {
       setChat((prev) => [
         ...prev,
@@ -418,11 +459,25 @@ export default function Page() {
                 </div>
 
                 <div className="chat-messages">
-                  {chat.map((m, i) => (
-                    <div key={i} className={`message ${m.role}`}>
-                      {m.text}
-                    </div>
-                  ))}
+                  {chat.map((m, i) => {
+                    const r = resumenPlan(m.plan);
+                    return (
+                      <div key={i} className={`message ${m.role}`}>
+                        {m.text.replace(/```plan[\s\S]*?```/gi, "").trim() || "Plan de producción generado."}
+                        {r && (
+                          <div className="plan-chip">
+                            <div>
+                              <strong>{r.titulo}</strong>
+                              <small>
+                                {r.duracion}s · {r.escenas} escenas
+                              </small>
+                            </div>
+                            <span>plan</span>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                   {pensando && <div className="message assistant">…</div>}
                   {chat.length <= 2 && (
                     <div className="suggestions">
@@ -497,6 +552,31 @@ export default function Page() {
                 ))}
               </div>
             </section>
+
+            {(() => {
+              const r = resumenPlan(plan);
+              if (!r) return null;
+              return (
+                <section className="plan-card">
+                  <div>
+                    <p className="eyebrow">PLAN DE PRODUCCIÓN LISTO</p>
+                    <h2>{r.titulo}</h2>
+                    <p>
+                      {r.duracion}s · {r.escenas} escenas
+                      {r.cierre ? ` · cierre: “${r.cierre}”` : ""}
+                    </p>
+                  </div>
+                  <button
+                    className="button primary"
+                    onClick={() =>
+                      avisar("El render automático está en la próxima fase del roadmap", true)
+                    }
+                  >
+                    Generar reel →
+                  </button>
+                </section>
+              );
+            })()}
 
             <section className="publish-card">
               <div>

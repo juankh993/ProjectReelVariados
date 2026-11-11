@@ -93,6 +93,16 @@ Por eso [consecuencia que sorprende]."
 VOZ: "[Remate]. ¿Vos lo sabías?"
 ```
 
+## Regla de retención (2026-11-10)
+
+- **< 50% de retención:** no se repite ese tema ni ese formato. Se cambia a un pilar con
+  retención comprobada (**espacio**) y a un formato de **simulación o demostración**.
+- **50-70%:** se ajusta el gancho/ritmo antes de repetir.
+- **≥ 70%:** se mantiene y se duplica el pilar.
+
+Referencia actual: "El lugar más frío del universo" retiene **88%**; "Tu cuerpo brilla", **32%**.
+Por eso el próximo ciclo prioriza espacio + animación.
+
 ## Plan de arranque
 
 | Fase | Meta |

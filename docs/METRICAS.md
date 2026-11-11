@@ -31,10 +31,12 @@ scripts\metricas-youtube.ps1 -Dias 28 -Max 10 -Guardar
 
 ## Cómo se decide el siguiente paso
 
-- **Retención < 60%**: el problema es el gancho o el ritmo. Acortar la intro, cortar planos largos.
-- **Retención 60-70%**: ajustar el guion (un dato más fuerte, menos explicación).
-- **Retención ≥ 70% y subs creciendo**: subir la frecuencia (3 → 5 por semana).
-- **Un pilar rinde mucho mejor**: duplicarlo (ver `docs/ESTRATEGIA.md`).
+- **Retención < 50%:** se descarta el tema y el formato. Se pasa a un pilar con retención
+  comprobada (**espacio**) y a un formato de **simulación/demostración**.
+- **Retención 50-70%:** se ajusta el gancho o el ritmo antes de repetir.
+- **Retención ≥ 70%:** se mantiene el pilar y se duplica.
+
+> Referencia: "El lugar más frío del universo" tiene 88%; "Tu cuerpo brilla", 32%.
 
 > "Vistos vs. deslizados" es un dato de YouTube Studio que **no** está en la API.
 > Se aproxima con el % de retención (`averageViewPercentage`).
@@ -55,3 +57,12 @@ Estimación: 6.9 h / 1.2 K vistas ≈ 20 s por vista → ~40% de retención en v
 - Los hipopótamos de Escobar: 780 vistas · 24 likes · 4 comentarios
 - Tu cuerpo brilla: 232 vistas · 10 likes · 3 comentarios
 - Retención: la API de Analytics todavía devuelve 0 (retraso de 48-72 h).
+
+## 2026-11-10 (retención)
+
+- 14 suscriptores | 4 videos
+- El lugar más frío: 1.238 vistas · **88% retención**
+- Los hipopótamos: 838 vistas · retención pendiente
+- Tu cuerpo brilla: 232 vistas · **32% retención**
+- WiFi: 56 vistas · retención pendiente
+- Regla: <50% se descarta el tema/formato; priorizar espacio + simulación.

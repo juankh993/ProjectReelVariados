@@ -12,7 +12,7 @@ Material: [autor y licencia, solo si la fuente exige crédito]
 
 ¿Cuál te sorprendió más? Dejalo en los comentarios.
 
-#Datoneta #Curiosidades #Ciencia #Shorts
+#datoneta #shorts #ytshorts #youtubeshorts
 ```
 
 ## Título

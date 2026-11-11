@@ -318,3 +318,37 @@ code {
   font-size: 11.5px;
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
 }
+
+/* plan de produccion */
+.plan-chip {
+  margin-top: 9px;
+  border: 1px solid #4a3f86;
+  background: #1a1636;
+  border-radius: 7px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.plan-chip strong { display: block; font-size: 12.5px; color: #d8d2ff; }
+.plan-chip small { color: #9c94c8; font-size: 11px; }
+.plan-chip > span {
+  font-size: 9.5px; letter-spacing: 1.4px; text-transform: uppercase;
+  color: #b7aaff; border: 1px solid #4a3f86; border-radius: 20px; padding: 2px 7px;
+}
+
+.plan-card {
+  margin-top: 16px;
+  border: 1px solid #4a3f86;
+  background: linear-gradient(110deg, #1d1840, #121a2b);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.plan-card h2 { margin: 0 0 3px; font-size: 16px; }
+.plan-card p { margin: 0; color: var(--muted); font-size: 12.5px; }

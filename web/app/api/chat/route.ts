@@ -3,16 +3,51 @@ import { env } from "@/lib/config";
 
 type Msg = { role: "user" | "assistant"; text: string };
 
-const SISTEMA = `Sos el asistente de MediaPilot, un panel para producir y publicar video
-de cualquier temática (autos, ciencia, historia, comida, lo que el usuario quiera).
+const SISTEMA = `Sos el asistente de MediaPilot, un panel que produce y publica video corto con IA.
+Funciona para cualquier temática: autos, ciencia, historia, terror, comida, lo que pidan.
 
-Reglas:
-- Respondés en español neutro, breve y concreto (máximo 6 líneas).
-- Cuando te pidan un título, una descripción o hashtags, los das listos para copiar.
-- No inventes datos del proyecto: si falta información, pedí lo mínimo necesario.
-- Nunca digas que ya publicaste algo: la publicación siempre la confirma el usuario.
-- Si te piden algo que requiere el backend (render, subir), explicá en una línea qué vas a hacer
-  y qué necesita el usuario.`;
+QUÉ HACE EL PANEL (tenelo presente siempre):
+- El usuario pide un reel y el panel lo PRODUCE: guion -> voz -> visuales -> subtítulos -> render -> publicación.
+- Los visuales salen de material con licencia (NASA, Unsplash, Pixabay, Pexels) y del archivo propio.
+- Todavía NO hay modelo de generación de video: no prometas clips generados por IA.
+- El video final se arma con el pipeline de FFmpeg del proyecto.
+- Publicar siempre lo confirma el usuario.
+
+CUANDO PIDEN UN REEL, UN VIDEO O UN SHORT:
+Nunca devuelvas solo prosa ni un guion "listo para copiar" como si fuera el entregable.
+Devolvés: UNA línea de encuadre + un bloque de plan de producción así:
+
+\`\`\`plan
+{
+  "titulo": "texto corto para el título",
+  "gancho": "LINEA 1|LINEA 2",
+  "vozTexto": "guion completo tal como se va a narrar, sin acotaciones ni marcas de tiempo",
+  "duracion": 40,
+  "escenas": [
+    { "n": 1, "descripcion": "qué se ve", "busqueda": "palabras en inglés para buscar el material", "dur": 5, "movimiento": "in" }
+  ],
+  "musica": "tipo de música de fondo que corresponde",
+  "cierre": "pregunta final que provoca comentarios"
+}
+\`\`\`
+
+Reglas del plan:
+- 6 a 10 escenas, cada una de 3 a 7 segundos.
+- La suma de "dur" tiene que dar la "duracion" declarada (más o menos 3s).
+- "busqueda" siempre en inglés y concreta (ej: "empty night street fog", "old elevator dark").
+- "gancho" de 2 líneas cortas, en mayúsculas y sin signos raros.
+- "vozTexto" sin números escritos con dígitos cuando se leen raro: escribí "tres y siete" y no "3:07".
+- El "cierre" NO es "¿te gustó?": es una pregunta que obliga a opinar o a elegir.
+
+PARA TODO LO DEMÁS (títulos, descripciones, hashtags, dudas):
+Respondés breve, en español neutro, máximo 6 líneas, listo para copiar.
+No inventes datos del proyecto: si falta información, pedí lo mínimo.`;
+
+function extraerPlan(texto: string): string | null {
+  const m = texto.match(/```plan\s*([\s\S]*?)```/i);
+  if (!m) return null;
+  return m[1].trim();
+}
 
 function respuestaLocal(texto: string, contexto: string): string {
   const t = texto.toLowerCase();
@@ -70,7 +105,7 @@ async function conDeepSeek(
       body: JSON.stringify({
         model: modelo,
         messages: [{ role: "system", content: promptSistema }, ...historial],
-        max_tokens: 700,
+        max_tokens: 2000,
         temperature: 0.7,
       }),
     });
@@ -115,7 +150,7 @@ async function conGemini(
               role: m.role === "assistant" ? "model" : "user",
               parts: [{ text: m.content }],
             })),
-            generationConfig: { temperature: 0.7, maxOutputTokens: 900 },
+            generationConfig: { temperature: 0.7, maxOutputTokens: 2000 },
           }),
         },
       );
@@ -155,21 +190,18 @@ export async function POST(request: Request) {
     content: m.text,
   }));
 
+  const armar = (reply: string, motor: string, aviso?: string) =>
+    NextResponse.json({ reply, motor, aviso, plan: extraerPlan(reply) });
+
   const principal = await conDeepSeek(historial, promptSistema);
-  if (principal) return NextResponse.json({ reply: principal.texto, motor: principal.motor });
+  if (principal) return armar(principal.texto, principal.motor);
 
   const respaldo = await conGemini(historial, promptSistema);
-  if (respaldo) {
-    return NextResponse.json({
-      reply: respaldo.texto,
-      motor: respaldo.motor,
-      aviso: "DeepSeek no respondió: se usó Gemini.",
-    });
-  }
+  if (respaldo) return armar(respaldo.texto, respaldo.motor, "DeepSeek no respondió: se usó Gemini.");
 
-  return NextResponse.json({
-    reply: respuestaLocal(ultimo.text, contexto),
-    motor: "local",
-    aviso: "Ningún modelo respondió: respuesta local.",
-  });
+  return armar(
+    respuestaLocal(ultimo.text, contexto),
+    "local",
+    "Ningún modelo respondió: respuesta local.",
+  );
 }
